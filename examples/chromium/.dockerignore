@@ -1,0 +1,6 @@
+/.cipd/
+/.gitignore
+/.gclient
+/.gclient_entries
+/_bad_scm/
+/src/

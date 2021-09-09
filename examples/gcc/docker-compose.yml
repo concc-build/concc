@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+  user:
+    image: gcc-buildenv
+    init: true
+    volumes:
+      - ./proj:/proj
+      - ./build.sh:/build.sh
+    tmpfs:
+      - /var/lib/concc
+    environment:
+      CONCC_DIR: /var/lib/concc
+      #CONCC_DEBUG: 1
+
+  worker:
+    image: gcc-buildenv
+    init: true
+    command: >-
+      sh /opt/concc/run-worker.sh
+    cap_add:
+      - SYS_ADMIN
+    devices:
+      - /dev/fuse:/dev/fuse

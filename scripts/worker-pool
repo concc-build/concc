@@ -1,0 +1,121 @@
+#!/usr/bin/env python3
+
+from __future__ import print_function
+
+import argparse
+import fcntl
+import json
+import os
+import pathlib
+import sys
+
+CONCC_DIR = os.environ.get('CONCC_DIR', '/var/lib/concc')
+
+def eprint(*args, **kwargs):
+  print(*args, file=sys.stderr, **kwargs)
+
+def _status(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    print('{}'.format(data))
+
+def _reset(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    pathlib.Path(workers_json).write_text('[]')
+
+def _add(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    workers = json.loads(data)
+    worker = next((worker for worker in workers if worker['host'] == args.host), None)
+    if worker:
+      eprint('ERROR: already exists')
+      sys.exit(1)
+    workers.append({
+      'host': args.host,
+      'limit': args.limit,
+      'count': 0,
+    })
+    pathlib.Path(workers_json).write_text(json.dumps(workers))
+
+def _remove(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    workers = json.loads(data)
+    workers = list(filter(lambda x: x['host'] != args.host, workers))
+    pathlib.Path(workers_json).write_text(json.dumps(workers))
+
+def _allocate(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    workers = json.loads(data)
+    worker = max(workers, key = lambda x: x['limit'] - x['count'])
+    if worker['count'] >= worker['limit']:
+      eprint('ERROR: no free worker')
+      sys.exit(1)
+    worker['count'] += 1
+    pathlib.Path(workers_json).write_text(json.dumps(workers))
+    print("{}".format(worker['host']))
+
+def _release(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    workers = json.loads(data)
+    worker = next((worker for worker in workers if worker['host'] == args.host), None)
+    if worker:
+      if worker['count'] == 0:
+        eprint('ERROR: no worker allocated')
+        sys.exit(1)
+      worker['count'] -= 1
+      pathlib.Path(workers_json).write_text(json.dumps(workers))
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--dir', default=CONCC_DIR)
+
+subparsers = parser.add_subparsers()
+
+parser_status = subparsers.add_parser('status')
+parser_status.set_defaults(handler=_status)
+
+parser_reset = subparsers.add_parser('reset')
+parser_reset.set_defaults(handler=_reset)
+
+parser_add = subparsers.add_parser('add')
+parser_add.add_argument('host')
+parser_add.add_argument('limit', type=int)
+parser_add.set_defaults(handler=_add)
+
+parser_remove = subparsers.add_parser('remove')
+parser_remove.add_argument('host')
+parser_remove.set_defaults(handler=_remove)
+
+parser_allocate = subparsers.add_parser('allocate')
+parser_allocate.set_defaults(handler=_allocate)
+
+parser_release = subparsers.add_parser('release')
+parser_release.add_argument('host')
+parser_release.set_defaults(handler=_release)
+
+args = parser.parse_args()
+if hasattr(args, 'handler'):
+  args.handler(args)
+else:
+  parser.print_help()
