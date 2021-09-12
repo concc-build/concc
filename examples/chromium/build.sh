@@ -1,4 +1,6 @@
-CLIENT_PORT=$1
+CLIENT=$1
+CLIENT_HOST=$(echo $CLIENT | cut -d ':' -f 1)
+CLIENT_PORT=$(echo $CLIENT | cut -d ':' -f 2)
 shift 1
 
 TARGET=$1
@@ -19,7 +21,7 @@ do
 
   echo "$WORKER: Mounting the chromium directory..."
   ssh -p $WORKER_PORT $WORKER_HOST \
-    sshfs -p $CLIENT_PORT $(hostname):/chromium/src /chromium/src
+    sshfs -p $CLIENT_PORT $CLIENT_HOST:/chromium/src /chromium/src
 
   LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)
   echo "$WORKER: Maximum number of jobs: $LIMIT"

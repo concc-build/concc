@@ -23,7 +23,7 @@ docker compose up -d --scale worker=2 worker
 Then, build it with the worker containers:
 
 ```shell
-docker compose run --rm user sh /build.sh 22 \
+docker compose run --rm user sh /build.sh user:22 \
   $(docker compose ps --format json | jq -r '.[].Name' | sed 's/$/:22/' | tr '\n' ' ')
 ```
 

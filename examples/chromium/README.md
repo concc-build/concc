@@ -37,7 +37,7 @@ docker compose up -d --scale worker=2 worker
 Then, build a target with worker containers:
 
 ```shell
-docker compose run --rm user sh /build.sh 22 chrome \
+docker compose run --rm user sh /build.sh user:22 chrome \
   $(docker compose ps --format json | jq -r '.[].Name' | sed 's/$/:22/' | tr '\n' ' ')
 ```
 

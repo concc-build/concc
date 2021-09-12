@@ -1,4 +1,6 @@
-CLIENT_PORT=$1
+CLIENT=$1
+CLIENT_HOST=$(echo $CLIENT | cut -d ':' -f 1)
+CLIENT_PORT=$(echo $CLIENT | cut -d ':' -f 2)
 shift 1
 
 echo "Starting SSH server..."
@@ -16,7 +18,7 @@ do
 
   echo "$WORKER: Mounting the proj directory..."
   ssh -p $WORKER_PORT $WORKER_HOST \
-    sshfs -p $CLIENT_PORT $(hostname):/proj /proj
+    sshfs -p $CLIENT_PORT $CLIENT_HOST:/proj /proj
 
   LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)
   echo "$WORKER: Maximum number of jobs: $LIMIT"

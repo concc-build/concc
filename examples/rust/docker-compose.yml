@@ -3,7 +3,10 @@ version: '3'
 services:
   user:
     image: rust-buildenv
+    hostname: user
     init: true
+    ports:
+      - '22022:22/tcp'
     volumes:
       - ./proj:/proj
       - ./build.sh:/build.sh
@@ -22,3 +25,5 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/fuse:/dev/fuse
+    ports:
+      - '22/tcp'
