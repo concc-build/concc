@@ -32,7 +32,7 @@ Using `docker stats`, you can confirm that build jobs will be distributed to the
 `rustc` will be executed on the worker container.  Other jobs like downloading crates will be
 performed on the user container.
 
-## Worker containers running on remote machines
+## Build with remote worker containers
 
 Transfer the image from the local machine to the remote machine:
 

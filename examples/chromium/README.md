@@ -44,7 +44,7 @@ docker compose run --rm user sh /build.sh user:22 chrome \
 Building chrome takes a long time depending on your environment.  We recommend to build nasm
 instead of it if you like to save the build time for confirmation.
 
-## Worker containers running on remote machines
+## Build with remote worker containers
 
 Transfer the image from the local machine to the remote machine:
 

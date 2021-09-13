@@ -32,7 +32,7 @@ Using `docker stats`, you can confirm that build jobs will be distributed to the
 `gcc` will be executed on the worker container.  Unlike `icecc`, all preprocessor directives
 including `#include` directives are processed on the worker container.
 
-## Worker containers running on remote machines
+## Build with remote Worker containers
 
 Transfer the image from the local machine to the remote machine:
 

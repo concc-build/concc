@@ -16,6 +16,12 @@ do
   WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
   WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
 
+  until ssh -O check -p $WORKER_PORT $WORKER_HOST
+  do
+    echo "$WORKER: Establishing a SSH control master connection..."
+    ssh -p $WORKER_PORT $WORKER_HOST :
+  done
+
   echo "$WORKER: Mounting the proj directory..."
   ssh -p $WORKER_PORT $WORKER_HOST \
     sshfs -p $CLIENT_PORT $CLIENT_HOST:/proj /proj
