@@ -8,8 +8,6 @@ services:
     volumes:
       - ./proj:/proj
       - ./build.sh:/build.sh
-    tmpfs:
-      - /var/lib/concc
     environment:
       CONCC_DIR: /var/lib/concc
       #CONCC_DEBUG: 1

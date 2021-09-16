@@ -6,4 +6,4 @@ COPY ./scripts /opt/concc/
 RUN sh -eux /opt/concc/setup.sh
 EXPOSE 22/tcp
 ENV PATH="$PATH:/opt/depot_tools"
-WORKDIR /chromium/src
+WORKDIR /proj

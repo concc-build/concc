@@ -9,7 +9,7 @@ tar --exclude src -ch . | docker build -t chromium-buildenv -
 ## Get the Chromium source code
 
 ```shell
-docker run --rm -it -v $(pwd):/chromium chromium-buildenv fetch --nohooks --no-history chromium
+docker run --rm -it -v $(pwd)/proj:/proj chromium-buildenv fetch --nohooks --no-history chromium
 ```
 
 This may take several hours depending on your network environment.
@@ -18,9 +18,9 @@ Increase the VM memory more than 4GB before running the command above if you use
 for Mac.  Otherwise, you'll see messages like below:
 
 ```text
-________ running 'git -c core.deltaBaseCacheLimit=2g clone --no-checkout --progress https://chromium.googlesource.com/chromium/src.git --depth=1 /chromium/_gclient_src_xll8glrp' in '/chromium'
-Cloning into '/chromium/_gclient_src_xll8glrp'...
-1>WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src.git" "--depth=1" "/chromium/_gclient_src_xll8glrp"' in /chromium failed; will retry after a short nap...
+________ running 'git -c core.deltaBaseCacheLimit=2g clone --no-checkout --progress https://chromium.googlesource.com/chromium/src.git --depth=1 /proj/_gclient_src_xll8glrp' in '/proj'
+Cloning into '/proj/_gclient_src_xll8glrp'...
+1>WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src.git" "--depth=1" "/proj/_gclient_src_xll8glrp"' in /proj failed; will retry after a short nap...
 ```
 
 Running with 6GB works fine.  We confirmed that `gclient` consumed memory more than 4GB while
@@ -31,14 +31,15 @@ fetching `//third_party/angle/third_party/VK-GL-CTS/src`.
 Launch worker containers:
 
 ```shell
-docker compose up -d --scale worker=2 worker
+docker-compose up -d --scale worker=2 worker
 ```
 
 Then, build a target with worker containers:
 
 ```shell
-docker compose run --rm user sh /build.sh user:22 chrome \
-  $(docker compose ps --format json | jq -r '.[].Name' | sed 's/$/:22/' | tr '\n' ' ')
+docker-compose run --rm user sh /build.sh user:22 chrome \
+  $(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | \
+    sed 's/$/:22/' | tr '\n' ' ')
 ```
 
 Building chrome takes a long time depending on your environment.  We recommend to build nasm
@@ -64,5 +65,5 @@ docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /de
 Then, build with the remote worker container:
 
 ```shell
-docker compose run --rm -p 22022:22/tcp user sh /build.sh $(hostname):22022 chrome $REMOTE:22022
+docker-compose run --rm -p 22022:22/tcp user sh /build.sh $(hostname):22022 chrome $REMOTE:22022
 ```
