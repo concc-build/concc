@@ -8,5 +8,5 @@ fi
 WORKER=$(/opt/concc/worker-pool allocate)
 WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
 WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
-python3 /opt/concc/scriptify.py $@ | ssh -p $WORKER_PORT $WORKER_HOST sh -s
+python3 /opt/concc/scriptify.py "$@" | ssh -p $WORKER_PORT $WORKER_HOST sh -s
 /opt/concc/worker-pool release $WORKER
