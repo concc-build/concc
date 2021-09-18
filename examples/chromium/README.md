@@ -3,13 +3,14 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude src -ch . | docker build -t chromium-buildenv -
+tar --exclude project -ch . | docker build -t chromium-buildenv -
 ```
 
 ## Get the Chromium source code
 
 ```shell
-docker run --rm -it -v $(pwd)/proj:/proj chromium-buildenv fetch --nohooks --no-history chromium
+docker run --rm -it -v $(pwd)/project:/workspace/project chromium-buildenv \
+  concc 'fetch --nohooks --no-history chromium'
 ```
 
 This may take several hours depending on your network environment.
@@ -18,9 +19,9 @@ Increase the VM memory more than 4GB before running the command above if you use
 for Mac.  Otherwise, you'll see messages like below:
 
 ```text
-________ running 'git -c core.deltaBaseCacheLimit=2g clone --no-checkout --progress https://chromium.googlesource.com/chromium/src.git --depth=1 /proj/_gclient_src_xll8glrp' in '/proj'
-Cloning into '/proj/_gclient_src_xll8glrp'...
-1>WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src.git" "--depth=1" "/proj/_gclient_src_xll8glrp"' in /proj failed; will retry after a short nap...
+________ running 'git -c core.deltaBaseCacheLimit=2g clone --no-checkout --progress https://chromium.googlesource.com/chromium/src.git --depth=1 /workspace/project/_gclient_src_xll8glrp' in '/workspace/project'
+Cloning into '/workspace/project/_gclient_src_xll8glrp'...
+1>WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src.git" "--depth=1" "/workspace/project/_gclient_src_xll8glrp"' in /workspace/project failed; will retry after a short nap...
 ```
 
 Running with 6GB works fine.  We confirmed that `gclient` consumed memory more than 4GB while
@@ -34,12 +35,19 @@ Launch worker containers:
 docker-compose up -d --scale worker=2 worker
 ```
 
+Generate Ninja files:
+
+```shell
+docker-compose run --rm client concc \
+  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-wrapper\""'
+```
+
 Then, build a target with worker containers:
 
 ```shell
-docker-compose run --rm user sh /build.sh user:22 chrome \
-  $(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | \
-    sed 's/$/:22/' | tr '\n' ' ')
+docker-compose run --rm client concc \
+  -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+  'autoninja chrome -C src/out/Default -j $(concc-worker-pool limit)'
 ```
 
 Building chrome takes a long time depending on your environment.  We recommend to build nasm
@@ -59,11 +67,19 @@ Launch a worker container on a remote machine:
 
 ```shell
 docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /dev/fuse \
-  -p 22022:22/tcp --privileged chromium-buildenv sh /opt/concc/run-worker.sh
+  -p 2222:22/tcp --privileged chromium-buildenv concc-worker
+```
+
+Generate Ninja files:
+
+```shell
+docker-compose run --rm client concc \
+  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-wrapper\""'
 ```
 
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 22022:22/tcp user sh /build.sh $(hostname):22022 chrome $REMOTE:22022
+docker-compose run --rm -p 2222:22/tcp client concc -c $(hostname):2222 -w $REMOTE:2222 \
+  'autoninja chrome -C src/out/Default -j $(concc-worker-pool limit)'
 ```

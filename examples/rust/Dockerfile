@@ -1,5 +1,6 @@
 FROM rust
-COPY ./scripts /opt/concc/
-RUN sh -eux /opt/concc/setup.sh
+COPY ./docker/setup.sh /
+RUN sh -eux /setup.sh
+COPY ./docker/bin/* /usr/local/bin/
 EXPOSE 22/tcp
-WORKDIR /proj
+WORKDIR /workspace

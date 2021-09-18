@@ -1,22 +1,18 @@
 version: '3'
 
 services:
-  user:
+  client:
     image: rust-buildenv
-    hostname: user
     init: true
     volumes:
-      - ./proj:/proj
-      - ./build.sh:/build.sh
-    environment:
-      CONCC_DIR: /var/lib/concc
-      #CONCC_DEBUG: 1
+      - ./project:/workspace/project
+      - ./scripts:/workspace/scripts:ro
 
   worker:
     image: rust-buildenv
     init: true
     command: >-
-      sh /opt/concc/run-worker.sh
+      concc-worker
     cap_add:
       - SYS_ADMIN
     devices:

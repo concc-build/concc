@@ -1,0 +1,157 @@
+#!/bin/sh
+
+export CONCC_DIR=/home/concc
+
+PROGNAME=$(basename $0)
+BASEDIR=$(cd $(dirname $0); pwd)
+
+DEFAULT_SSH_PORT=22
+
+CLIENT=$(hostname)
+WORKERS=
+VERBOSE=0
+
+help() {
+  cat <<EOF >&2
+Execute a script with concc distributed build system
+
+USAGE:
+  $PROGNAME [-c <client>] [-w <workers>] [-v <verbose>] <script>
+  $PROGNAME -h | --help
+
+OPTIONS:
+  -c, --client <client> [default: $CLIENT]
+    Host and port of the client container in the form <client_host>[:<client_port>].
+
+  -w, --workers <workers> [default: '']
+    A comma-separated list of hosts and ports of worker containers to be connected.
+
+  -v, --verbose <verbose> [default: $VERBOSE]
+    Verbose level.
+
+ARGUMENTS:
+  <script>
+    A script to be executed by the concc user on the client container.
+EOF
+  exit 0
+}
+
+log() {
+  echo "$1" >&2
+}
+
+vlog() {
+  if [ $VERBOSE -ge $1 ]
+  then
+    log "$2"
+  fi
+}
+
+error() {
+  log "ERROR: $1"
+  exit 1
+}
+
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    '-h' | '--help')
+      help
+      ;;
+    '-c' | '--client')
+      CLIENT="$2"
+      shift 2
+      ;;
+    '-w' | '--workers')
+      WORKERS="$2"
+      shift 2
+      ;;
+    '-v' | '--verbose')
+      VERBOSE=$2
+      shift 2
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+SCRIPT="$@"
+
+CLIENT_HOST=$(echo "$CLIENT:" | cut -d ':' -f 1)
+CLIENT_PORT=$(echo "$CLIENT:" | cut -d ':' -f 2)
+CLIENT_PORT=${CLIENT_PORT:-$DEFAULT_SSH_PORT}
+CLIENT="$CLIENT_HOST:$CLIENT_PORT"
+
+vlog 1 "Starting SSH server..."
+service ssh start  # FIXME
+
+CONCC_UID=$(ls -ld /workspace/project | cut -d ' ' -f 3)
+if getent passwd $CONCC_UID
+then
+   CONCC_UID=$(getent passwd $CONCC_UID | cut -d ':' -f 3)
+fi
+
+CONCC_GID=$(ls -ld /workspace/project | cut -d ' ' -f 4)
+if getent group $CONCC_GID
+then
+  CONCC_GID=$(getent group $CONCC_GID | cut -d ':' -f 3)
+fi
+
+vlog 1 "Creating a user account for concc with $CONCC_UID:$CONCC_GID..."
+groupadd -o -g $CONCC_GID concc
+useradd -o -m -g $CONCC_GID -u $CONCC_UID concc
+
+vlog 1 "Copying /home/concc/.ssh from /root/.ssh..."
+cp -R $HOME/.ssh /home/concc/
+chown -R concc:concc /home/concc/.ssh
+
+if [ -f /workspace/scripts/setup-client ]
+then
+  vlog 1 "Run setup-client..."
+  /workspace/scripts/setup-client $CLIENT
+fi
+
+vlog 1 "Initializing the worker pool..."
+gosu concc concc-worker-pool reset
+
+for WORKER in $(echo "$WORKERS" | tr ',' ' ')
+do
+  WORKER_HOST=$(echo "$WORKER:" | cut -d ':' -f 1)
+  WORKER_PORT=$(echo "$WORKER:" | cut -d ':' -f 2)
+  WORKER_PORT=${WORKER_PORT:-$DEFAULT_SSH_PORT}
+  WORKER="$WORKER_HOST:$WORKER_PORT"
+
+  vlog 1 "$WORKER: Creating a user account for concc with $CONCC_UID:$CONCC_GID..."
+  ssh -p $WORKER_PORT $WORKER_HOST groupadd -o -g $CONCC_GID concc
+  ssh -p $WORKER_PORT $WORKER_HOST useradd -o -m -g $CONCC_GID -u $CONCC_UID concc
+
+  vlog 1 "$WORKER: Copying /home/concc/.ssh..."
+  scp -q -P $WORKER_PORT -r /home/concc/.ssh $WORKER_HOST:/home/concc/
+  ssh -p $WORKER_PORT $WORKER_HOST chown -R concc:concc /home/concc/.ssh
+
+  until ssh -O check -p $WORKER_PORT concc@$WORKER_HOST
+  do
+    vlog 1 "$WORKER: Establishing a SSH control master connection..."
+    ssh -p $WORKER_PORT concc@$WORKER_HOST :
+  done
+
+  vlog 1 "$WORKER: Mounting the proj directory..."
+  ssh -p $WORKER_PORT $WORKER_HOST chown concc:concc /workspace
+  ssh -p $WORKER_PORT concc@$WORKER_HOST \
+    sshfs -p $CLIENT_PORT concc@$CLIENT_HOST:/workspace /workspace
+
+  if [ -f /workspace/scripts/setup-worker ]
+  then
+    vlog 1 "Running setup-worker..."
+    /workspace/scripts/setup-worker $CLIENT $WORKER
+  fi
+
+  LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)
+  vlog 1 "$WORKER: Maximum number of jobs: $LIMIT"
+
+  vlog 1 "Add $WORKER to the worker pool..."
+  gosu concc concc-worker-pool add $WORKER $LIMIT
+done
+
+(cd /workspace/project; exec gosu concc sh -c "$SCRIPT")

@@ -9,6 +9,9 @@ import os
 import pathlib
 import sys
 
+from functools import reduce
+from operator import add
+
 CONCC_DIR = os.environ.get('CONCC_DIR', '/var/lib/concc')
 
 def eprint(*args, **kwargs):
@@ -87,6 +90,16 @@ def _release(args):
       worker['count'] -= 1
       pathlib.Path(workers_json).write_text(json.dumps(workers))
 
+def _limit(args):
+  workers_json = os.path.join(args.dir, 'workers.json')
+  workers_lock = os.path.join(args.dir, 'workers.lock')
+  with open(workers_lock, mode='w') as lock:
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    data = pathlib.Path(workers_json).read_text()
+    workers = json.loads(data)
+    limit = reduce(add, map(lambda x: x['limit'] - x['count'], workers), 0)
+    print('{}'.format(limit))
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--dir', default=CONCC_DIR)
 
@@ -113,6 +126,9 @@ parser_allocate.set_defaults(handler=_allocate)
 parser_release = subparsers.add_parser('release')
 parser_release.add_argument('host')
 parser_release.set_defaults(handler=_release)
+
+parser_release = subparsers.add_parser('limit')
+parser_release.set_defaults(handler=_limit)
 
 args = parser.parse_args()
 if hasattr(args, 'handler'):
