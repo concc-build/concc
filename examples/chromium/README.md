@@ -3,29 +3,28 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude project -ch . | docker build -t chromium-buildenv -
+tar --exclude project -ch . | \
+  docker build -t chromium-buildenv --build-arg='CHROMIUM=93.0.4577.63' -
 ```
 
 ## Get the Chromium source code
 
 ```shell
+mkdir project
+git clone --depth=1 --branch=93.0.4577.63 \
+  https://chromium.googlesource.com/chromium/src.git project/src
 docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
-  concc 'fetch --nohooks --no-history chromium'
+  concc gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
+docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
+  concc gclient sync --force
+docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
+  concc gclient runhooks
 ```
 
 This may take several hours depending on your network environment.
 
-Increase the VM memory more than 4GB before running the command above if you use Docker Desktop
-for Mac.  Otherwise, you'll see messages like below:
-
-```text
-________ running 'git -c core.deltaBaseCacheLimit=2g clone --no-checkout --progress https://chromium.googlesource.com/chromium/src.git --depth=1 /workspace/project/_gclient_src_xll8glrp' in '/workspace/project'
-Cloning into '/workspace/project/_gclient_src_xll8glrp'...
-1>WARNING: subprocess '"git" "-c" "core.deltaBaseCacheLimit=2g" "clone" "--no-checkout" "--progress" "https://chromium.googlesource.com/chromium/src.git" "--depth=1" "/workspace/project/_gclient_src_xll8glrp"' in /workspace/project failed; will retry after a short nap...
-```
-
-Running with 6GB works fine.  We confirmed that `gclient` consumed memory more than 4GB while
-fetching `//third_party/angle/third_party/VK-GL-CTS/src`.
+Increase the VM memory more than 8GB before running the commands above if you use Docker Desktop
+for Mac.
 
 ## Build
 
@@ -39,7 +38,7 @@ Generate Ninja files:
 
 ```shell
 docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
-  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
+  'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build a target with worker containers:
@@ -74,7 +73,7 @@ Generate Ninja files:
 
 ```shell
 docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
-  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
+  'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build with the remote worker container:
