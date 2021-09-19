@@ -6,6 +6,7 @@ services:
     init: true
     volumes:
       - ./project:/workspace/project
+      - ./scripts:/workspace/scripts
 
   worker:
     image: chromium-buildenv

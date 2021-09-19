@@ -9,7 +9,7 @@ tar --exclude project -ch . | docker build -t chromium-buildenv -
 ## Get the Chromium source code
 
 ```shell
-docker run --rm -it -v $(pwd)/project:/workspace/project chromium-buildenv \
+docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
   concc 'fetch --nohooks --no-history chromium'
 ```
 
@@ -38,7 +38,7 @@ docker-compose up -d --scale worker=2 worker
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc \
+docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
   'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
 ```
 
@@ -73,7 +73,7 @@ docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /de
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc \
+docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
   'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
 ```
 
