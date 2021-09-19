@@ -86,15 +86,19 @@ The component diagram is show below:
                                    with R/W permission
 ```
 
-Each client container contains the following components:
+Each client container contains the following commands:
 
-* [worker-pool](./scripts/worker-pool)
+* [concc](./docker/bin/concc)
+  * The entry point of a client container
+* [concc-worker](./docker/bin/concc-worker)
+  * The entry point of a worker container
+* [concc-dispatch](./docker/bin/concc-dispatch)
+  * Distributes executions onto worker containers
+* [concc-scriptify](./docker/bin/concc-scriptify)
+  * Makes a script from a command, which will be executed on a worker container
+* [concc-worker-pool](./docker/bin/concc-worker-pool)
   * Manages available worker containers
-  * Dispatches a worker container in the pool for a build job
-* [concc-wrapper](./scripts/concc-wrapper)
-  * A command to execute a given build command on a remote machine
-* [scriptify](./scripts/scriptify.py)
-  * A command to make a script to execute a given build command on a remote machine
+  * Assigns a worker container in the pool for a build job
 
 ## TODO
 

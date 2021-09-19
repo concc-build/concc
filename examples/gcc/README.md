@@ -25,7 +25,7 @@ Then, build it with worker containers:
 ```shell
 docker-compose run --rm client concc \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'make -j $(concc-worker-pool limit) CC="concc-wrapper gcc"'
+  'make -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
 ```
 
 Using `docker stats`, you can confirm that build jobs will be distributed to the worker containers.

@@ -25,7 +25,7 @@ Then, build it with the worker containers:
 ```shell
 docker-compose run --rm \
   -e CARGO_HOME=/home/concc/.cargo \
-  -e RUSTC_WRAPPER=/usr/local/bin/concc-wrapper \
+  -e RUSTC_WRAPPER=/usr/local/bin/concc-dispatch \
   client concc \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
   'cargo build --release -j $(concc-worker-pool limit)'
@@ -58,7 +58,7 @@ Then, build with the remote worker container:
 ```shell
 docker-compose run --rm -p 2222:22/tcp \
   -e CARGO_HOME=/home/concc/.cargo \
-  -e RUSTC_WRAPPER=/usr/local/bin/concc-wrapper \
+  -e RUSTC_WRAPPER=/usr/local/bin/concc-dispatch \
   client concc -c $(hostname):2222 -w $REMOTE:2222 \
   'cargo build --release -j $(concc-worker-pool limit)'
 ```

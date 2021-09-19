@@ -39,7 +39,7 @@ Generate Ninja files:
 
 ```shell
 docker-compose run --rm client concc \
-  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-wrapper\""'
+  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build a target with worker containers:
@@ -74,7 +74,7 @@ Generate Ninja files:
 
 ```shell
 docker-compose run --rm client concc \
-  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-wrapper\""'
+  'cd src && gn gen out/Default --args="cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build with the remote worker container:
