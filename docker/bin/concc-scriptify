@@ -9,12 +9,15 @@ EXCLUDED_ENVS = [
   'HOSTNAME',
   'PWD',
   'LC_CTYPE',
+  'CONCC_DEBUG_DISPATCH',
+  'CONCC_DEBUG_SCRIPTIFY',
+  'CONCC_RUN_LOCALLY',
 ]
 
 cmd = ' '.join([shlex.quote(arg) for arg in sys.argv[1:]])
 
 debug = False
-if os.environ.get('CONCC_DEBUG') == '1':
+if os.environ.get('CONCC_DEBUG_SCRIPTIFY') == '1':
   debug = True
 
 script = []
@@ -32,6 +35,4 @@ for k, v in os.environ.items():
 script.append('{}'.format(cmd))
 
 script = '\n'.join(script)
-if debug:
-  print('{}'.format(script), file=sys.stderr)
 print('{}'.format(script))

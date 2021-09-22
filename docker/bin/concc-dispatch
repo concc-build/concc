@@ -1,6 +1,6 @@
 #!/bin/sh
 
-if [ "$CONCC_DEBUG" = 1 ]
+if [ "$CONCC_DEBUG_DISPATCH" = 1 ]
 then
   set -x
 fi
