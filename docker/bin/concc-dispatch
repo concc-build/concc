@@ -6,7 +6,7 @@ then
 fi
 
 WORKER=$(concc-worker-pool allocate)
+trap "concc-worker-pool release $WORKER" EXIT
 WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
 WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
 concc-scriptify "$@" | ssh -p $WORKER_PORT $WORKER_HOST sh -s
-concc-worker-pool release "$WORKER"
