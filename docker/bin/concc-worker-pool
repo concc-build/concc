@@ -69,7 +69,6 @@ def _allocate(args):
     workers = json.loads(data)
     worker = max(workers, key = lambda x: x['limit'] - x['count'])
     if worker['count'] >= worker['limit']:
-      eprint('ERROR: no free worker')
       sys.exit(1)
     worker['count'] += 1
     pathlib.Path(workers_json).write_text(json.dumps(workers))

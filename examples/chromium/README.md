@@ -3,28 +3,25 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude project -ch . | \
-  docker build -t chromium-buildenv --build-arg='CHROMIUM=93.0.4577.63' -
+tar --exclude src -ch . | \
+  docker build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' -
 ```
 
 ## Get the Chromium source code
 
 ```shell
-mkdir project
-git clone --depth=1 --branch=93.0.4577.63 \
-  https://chromium.googlesource.com/chromium/src.git project/src
-docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
-  concc gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
-docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
-  concc gclient sync --force
-docker run --rm -it -v $(pwd)/project:/workspace/project -e CONCC_RUN_LOCALLY=1 chromium-buildenv \
-  concc gclient runhooks
+git clone --depth=1 --branch=94.0.4606.54 \
+  https://chromium.googlesource.com/chromium/src.git src
+docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
+  gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
+docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
+  gclient sync --force
 ```
 
 This may take several hours depending on your network environment.
 
-Increase the VM memory more than 8GB before running the commands above if you use Docker Desktop
-for Mac.
+Increase the VM memory more than 8GB before running the commands above if you
+use Docker Desktop for Mac.
 
 ## Build
 
@@ -46,7 +43,7 @@ Then, build a target with worker containers:
 ```shell
 docker-compose run --rm client concc \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'autoninja chrome -C src/out/Default -j $(concc-worker-pool limit)'
+  'autoninja -C src/out/Default -j $(concc-worker-pool limit) chrome'
 ```
 
 Building chrome takes a long time depending on your environment.  We recommend to build nasm
@@ -80,5 +77,5 @@ Then, build with the remote worker container:
 
 ```shell
 docker-compose run --rm -p 2222:22/tcp client concc -c $(hostname):2222 -w $REMOTE:2222 \
-  'autoninja chrome -C src/out/Default -j $(concc-worker-pool limit)'
+  'autoninja -C src/out/Default -j $(concc-worker-pool limit) chrome'
 ```

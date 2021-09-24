@@ -5,7 +5,9 @@ services:
     image: gcc-buildenv
     init: true
     volumes:
-      - ./project:/workspace/project
+      - .:/workspace
+    # We cannot define CC as an environment variable so that `configure` works
+    # properly.
 
   worker:
     image: gcc-buildenv
@@ -15,4 +17,4 @@ services:
     cap_add:
       - SYS_ADMIN
     devices:
-      - /dev/fuse:/dev/fuse
+      - /dev/fuse

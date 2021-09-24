@@ -1,2 +1,6 @@
+/.cipd/
+/.gclient
+/.gclient_entries
 /.gitignore
-/project/
+/_bad_scm/
+/src/

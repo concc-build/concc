@@ -1,7 +1,7 @@
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y --no-install-recommends build-essential
+apt-get install -y --no-install-recommends autoconf automake build-essential
 
 # cleanup
 apt-get clean

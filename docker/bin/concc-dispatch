@@ -2,11 +2,31 @@
 
 if [ "$CONCC_DEBUG_DISPATCH" = 1 ]
 then
-  set -x
+  set -ex
 fi
 
-WORKER=$(concc-worker-pool allocate)
-trap "concc-worker-pool release $WORKER" EXIT
+SLEEP=${CONCC_DEFAULT_SLEEP:-5}
+WORKER=
+
+release() {
+  if [ -n "$WORKER" ]
+  then
+    concc-worker-pool release $WORKER
+  fi
+}
+
+trap release EXIT INT TERM
+
+while true
+do
+  WORKER=$(concc-worker-pool allocate)
+  if [ -n "$WORKER" ]
+  then
+    break
+  fi
+  sleep $SLEEP
+done
+
 WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
 WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
-concc-scriptify "$@" | ssh -p $WORKER_PORT $WORKER_HOST sh -s
+concc-scriptify "$@" | ssh -p $WORKER_PORT root@$WORKER_HOST sh -s

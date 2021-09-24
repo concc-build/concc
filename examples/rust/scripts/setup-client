@@ -1,9 +1,0 @@
-#!/bin/sh
-
-CLIENT=$1
-CLIENT_HOST=$(echo $CLIENT | cut -d ':' -f 1)
-CLIENT_PORT=$(echo $CLIENT | cut -d ':' -f 2)
-
-CARGO_HOME=/home/concc/.cargo
-
-gosu concc mkdir -p $CARGO_HOME

@@ -86,13 +86,13 @@ CLIENT="$CLIENT_HOST:$CLIENT_PORT"
 vlog 1 "Starting SSH server..."
 service ssh start  # FIXME
 
-CONCC_UID=$(ls -ld /workspace/project | cut -d ' ' -f 3)
+CONCC_UID=$(ls -ld /workspace | cut -d ' ' -f 3)
 if getent passwd $CONCC_UID
 then
    CONCC_UID=$(getent passwd $CONCC_UID | cut -d ':' -f 3)
 fi
 
-CONCC_GID=$(ls -ld /workspace/project | cut -d ' ' -f 4)
+CONCC_GID=$(ls -ld /workspace | cut -d ' ' -f 4)
 if getent group $CONCC_GID
 then
   CONCC_GID=$(getent group $CONCC_GID | cut -d ':' -f 3)
@@ -103,7 +103,7 @@ groupadd -o -g $CONCC_GID concc
 useradd -o -m -g $CONCC_GID -u $CONCC_UID concc
 
 vlog 1 "Copying /home/concc/.ssh from /root/.ssh..."
-cp -R $HOME/.ssh /home/concc/
+cp -R /root/.ssh /home/concc/
 chown -R concc:concc /home/concc/.ssh
 
 if [ -f /workspace/scripts/setup-client ]
@@ -122,24 +122,15 @@ do
   WORKER_PORT=${WORKER_PORT:-$DEFAULT_SSH_PORT}
   WORKER="$WORKER_HOST:$WORKER_PORT"
 
-  vlog 1 "$WORKER: Creating a user account for concc with $CONCC_UID:$CONCC_GID..."
-  ssh -p $WORKER_PORT $WORKER_HOST groupadd -o -g $CONCC_GID concc
-  ssh -p $WORKER_PORT $WORKER_HOST useradd -o -m -g $CONCC_GID -u $CONCC_UID concc
-
-  vlog 1 "$WORKER: Copying /home/concc/.ssh..."
-  scp -q -P $WORKER_PORT -r /home/concc/.ssh $WORKER_HOST:/home/concc/
-  ssh -p $WORKER_PORT $WORKER_HOST chown -R concc:concc /home/concc/.ssh
-
-  until ssh -O check -p $WORKER_PORT concc@$WORKER_HOST
+  until ssh -O check -p $WORKER_PORT $WORKER_HOST
   do
     vlog 1 "$WORKER: Establishing a SSH control master connection..."
-    ssh -p $WORKER_PORT concc@$WORKER_HOST :
+    ssh -p $WORKER_PORT $WORKER_HOST :
   done
 
-  vlog 1 "$WORKER: Mounting the proj directory..."
-  ssh -p $WORKER_PORT $WORKER_HOST chown concc:concc /workspace
-  ssh -p $WORKER_PORT concc@$WORKER_HOST \
-    sshfs -p $CLIENT_PORT concc@$CLIENT_HOST:/workspace /workspace
+  vlog 1 "$WORKER: Mounting the workspace directory..."
+  ssh -p $WORKER_PORT $WORKER_HOST \
+    sshfs -p $CLIENT_PORT -o idmap=user concc@$CLIENT_HOST:/workspace /workspace
 
   if [ -f /workspace/scripts/setup-worker ]
   then
@@ -154,4 +145,6 @@ do
   gosu concc concc-worker-pool add $WORKER $LIMIT
 done
 
-(cd /workspace/project; exec gosu concc sh -c "$SCRIPT")
+vlog 1 "Total maximum number of jobs: $(gosu concc concc-worker-pool limit)"
+
+exec gosu concc sh -c "$SCRIPT"
