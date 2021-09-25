@@ -14,48 +14,47 @@ CC := "concc-dispatch gcc"
 .PHONY: all
 all: build
 
+# Worker containers will be kept running for debugging.
 .PHONY: build
-build: buildenv | src
+build: buildenv local-clean | src
 	docker-compose up -d --scale worker=$(SCALE) worker
 	sleep 1
-	docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc './autogen.sh'
-	docker-compose run --rm client concc -w $(WORKERS) 'make -j $(JOBS) CC=$(CC)'
-	docker-compose down -v
+	docker-compose run --rm client concc 'cd src && ./autogen.sh'
+	docker-compose run --rm client concc -w $(WORKERS) 'make -C src -j $(JOBS) CC=$(CC)'
 
+# Worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv | src
-	@if [ -z "$(REMOTE)" ]; then echo 'ERROR: REMOTE not specified' >&2; false; fi
-	docker -H ssh://$(REMOTE) stop $(REMOTE_CONTAINER) || true
-	docker -H ssh://$(REMOTE) image rm $(BUILDENV) || true
+remote-build: buildenv remote-clean | src
 	docker save $(BUILDENV) | docker -H ssh://$(REMOTE) load
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
 	sleep 1
-	docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc './autogen.sh'
-	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'make -j $(JOBS) CC=$(CC)'
-	docker -H ssh://$(REMOTE) stop $(REMOTE_CONTAINER)
+	docker-compose run --rm client concc 'cd src && ./autogen.sh'
+	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'make -C src -j $(JOBS) CC=$(CC)'
 
-.PHONY: test
-test: build
-	docker-compose up -d --scale worker=$(SCALE) worker
-	sleep 1
-	docker-compose run --rm client concc -w $(WORKERS) 'make check -j $(JOBS) CC=$(CC)'
-	docker-compose down -v
+# Worker containers will be kept running for debugging.
+.PHONY: check
+check: build
+	docker-compose run --rm client concc -w $(WORKERS) 'make -C src -j $(JOBS) CC=$(CC) check'
 
+# You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
-clean-all: remote-clean clean
+clean-all: src-clean local-clean remote-clean
 	rm -rf src
+	docker image rm -f $(BUILDENV)
 
 .PHONY: clean
-clean: src-clean
-	docker-compose down -v || true
-	docker image rm $(BUILDENV) || true
+clean: src-clean local-clean
+
+.PHONY: local-clean
+local-clean:
+	docker-compose down -v
 
 .PHONY: remote-clean
-remote-clean: src-clean
+remote-clean:
 	@if [ -z "$(REMOTE)" ]; then echo 'ERROR: REMOTE not specified' >&2; false; fi
-	docker -H ssh://$(REMOTE) stop $(REMOTE_CONTAINER) || true
-	docker -H ssh://$(REMOTE) image rm $(BUILDENV) || true
+	-docker -H ssh://$(REMOTE) stop $(REMOTE_CONTAINER)
+	docker -H ssh://$(REMOTE) image rm -f $(BUILDENV)
 
 .PHONY: buildenv
 buildenv:
@@ -66,4 +65,4 @@ src:
 
 .PHONY: src-clean
 src-clean:
-	make -C src clean
+	-make -C src clean
