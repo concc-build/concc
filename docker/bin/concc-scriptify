@@ -1,4 +1,4 @@
-#!/usr/bin/env concc-python3
+#!/opt/concc/bin/python3
 
 import os
 import shlex

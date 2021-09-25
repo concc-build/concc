@@ -18,9 +18,10 @@ EOF
 # The python3 executable file may be replaced with a script file in order to distribute executions
 # of python3 scripts onto worker containers.  Some of executable files contained in //docker/bin
 # are python scripts which have to be executed on the client container.  We copy the python3
-# executable file as concc-python3 and specify it in the shebang in each script file.
+# executable file into /opt/concc/bin/ and specify it in the shebang in each script file.
 PYTHON3=$(which python3)
-cp $PYTHON3 /usr/local/bin/concc-python3
+mkdir -p /opt/concc/bin
+cp $PYTHON3 /opt/concc/bin/python3
 
 # cleanup
 apt-get clean
