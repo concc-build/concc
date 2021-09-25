@@ -7,6 +7,7 @@ BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
 
+START_SSH=1
 CLIENT=$(hostname)
 WORKERS=
 VERBOSE=0
@@ -16,15 +17,19 @@ help() {
 Execute a script with concc distributed build system
 
 USAGE:
-  $PROGNAME [-c <client>] [-w <workers>] [-v <verbose>] <script>
+  $PROGNAME [-l] [-c <client>] [-w <workers>] [-v <verbose>] <script>
   $PROGNAME -h | --help
 
 OPTIONS:
-  -c, --client <client> [default: $CLIENT]
-    Host and port of the client container in the form <client_host>[:<client_port>].
+  -l, --local
+    Run jobs locally.
 
-  -w, --workers <workers> [default: '']
-    A comma-separated list of hosts and ports of worker containers to be connected.
+  -c, --client <client> [default: '$CLIENT']
+    A colon-separated pair of the hostname and the port number of the client
+    container in the form <client_host>[:<client_port>].
+
+  -w, --workers <workers> [default: '$WORKERS']
+    A comma-separated list of worker containers to be connected.
 
   -v, --verbose <verbose> [default: $VERBOSE]
     Verbose level.
@@ -58,6 +63,11 @@ do
     '-h' | '--help')
       help
       ;;
+    '-l' | '--local')
+      export CONCC_RUN_LOCALLY=1
+      START_SSH=
+      shift
+      ;;
     '-c' | '--client')
       CLIENT="$2"
       shift 2
@@ -78,13 +88,16 @@ done
 
 SCRIPT="$@"
 
+if [ "$START_SSH" = 1 ]
+then
+  vlog 1 "Starting SSH server..."
+  service ssh start
+fi
+
 CLIENT_HOST=$(echo "$CLIENT:" | cut -d ':' -f 1)
 CLIENT_PORT=$(echo "$CLIENT:" | cut -d ':' -f 2)
 CLIENT_PORT=${CLIENT_PORT:-$DEFAULT_SSH_PORT}
 CLIENT="$CLIENT_HOST:$CLIENT_PORT"
-
-vlog 1 "Starting SSH server..."
-service ssh start  # FIXME
 
 CONCC_UID=$(ls -ld /workspace | cut -d ' ' -f 3)
 if getent passwd $CONCC_UID

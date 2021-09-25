@@ -12,10 +12,9 @@ tar --exclude src -ch . | \
 ```shell
 git clone --depth=1 --branch=94.0.4606.54 \
   https://chromium.googlesource.com/chromium/src.git src
-docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
+docker-compose run --rm client concc -l \
   gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
-docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
-  gclient sync --force
+docker-compose run --rm client concc -l gclient sync --force
 ```
 
 This may take several hours depending on your network environment.
@@ -34,7 +33,7 @@ docker-compose up -d --scale worker=2 worker
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
+docker-compose run --rm client concc -l \
   'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
@@ -69,7 +68,7 @@ docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /de
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm -e CONCC_RUN_LOCALLY=1 client concc \
+docker-compose run --rm client concc -l \
   'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
