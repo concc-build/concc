@@ -119,10 +119,10 @@ vlog 1 "Copying /home/concc/.ssh from /root/.ssh..."
 cp -R /root/.ssh /home/concc/
 chown -R concc:concc /home/concc/.ssh
 
-if [ -f /workspace/scripts/setup-client ]
+if [ -x /opt/concc/scripts/setup-client ]
 then
   vlog 1 "Run setup-client..."
-  /workspace/scripts/setup-client $CLIENT
+  /opt/concc/scripts/setup-client $CLIENT
 fi
 
 vlog 1 "Initializing the worker pool..."
@@ -145,10 +145,10 @@ do
   ssh -p $WORKER_PORT $WORKER_HOST \
     sshfs -p $CLIENT_PORT -o idmap=user concc@$CLIENT_HOST:/workspace /workspace
 
-  if [ -f /workspace/scripts/setup-worker ]
+  if [ -x /opt/concc/scripts/setup-worker ]
   then
     vlog 1 "Running setup-worker..."
-    /workspace/scripts/setup-worker $CLIENT $WORKER
+    /opt/concc/scripts/setup-worker $CLIENT $WORKER
   fi
 
   LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)

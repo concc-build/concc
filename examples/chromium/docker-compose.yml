@@ -6,6 +6,7 @@ services:
     init: true
     volumes:
       - .:/workspace
+      - ./scripts:/opt/concc/scripts
 
   worker:
     image: chromium-buildenv
@@ -15,4 +16,4 @@ services:
     cap_add:
       - SYS_ADMIN
     devices:
-      - /dev/fuse:/dev/fuse
+      - /dev/fuse
