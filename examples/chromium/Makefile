@@ -18,8 +18,8 @@ all: build
 build: buildenv local-clean | src
 	docker-compose up -d --scale worker=$(SCALE) worker
 	sleep 1
-	docker-compose run --rm client concc -l 'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
-	docker-compose run --rm client concc -w $(WORKERS) 'autoninja -C src/out/Default -j $(JOBS) $(TARGETS)'
+	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+	docker-compose run --rm client concc -C src -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: remote-build
@@ -28,14 +28,14 @@ remote-build: buildenv remote-clean | src
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
 	sleep 1
-	docker-compose run --rm client concc -l 'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
-	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'autoninja -C src/out/Default -j $(JOBS) $(TARGETS)'
+	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -C src -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: check
 check: build
-	docker-compose run --rm client concc -w $(WORKERS) 'autoninja -C src/out/Default -j $(JOBS) blink_unittests'
-	docker-compose run --rm client concc -l 'src/out/Default/blink_unittests'
+	docker-compose run --rm client concc -C src -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) blink_unittests'
+	docker-compose run --rm client concc -C src -l 'out/Default/blink_unittests'
 
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all

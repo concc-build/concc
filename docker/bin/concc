@@ -7,6 +7,7 @@ BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
 
+WORKDIR=$(pwd)
 START_SSH=1
 CLIENT=$(hostname)
 WORKERS=
@@ -21,6 +22,9 @@ USAGE:
   $PROGNAME -h | --help
 
 OPTIONS:
+  -C <dir>
+    Change to <dir> before doing anything else.
+
   -l, --local
     Run jobs locally.
 
@@ -62,6 +66,10 @@ do
   case "$1" in
     '-h' | '--help')
       help
+      ;;
+    '-C')
+      WORKDIR="$(cd $2; pwd)"
+      shift 2
       ;;
     '-l' | '--local')
       export CONCC_RUN_LOCALLY=1
@@ -160,4 +168,4 @@ done
 
 vlog 1 "Total maximum number of jobs: $(gosu concc concc-worker-pool limit)"
 
-exec gosu concc sh -c "$SCRIPT"
+(cd $WORKDIR; exec gosu concc sh -c "$SCRIPT")

@@ -14,8 +14,7 @@ all: build
 .PHONY: build
 build: buildenv local-clean | src
 	docker-compose up -d --scale worker=$(SCALE) worker
-	sleep 1
-	docker-compose run --rm client concc -w $(WORKERS) 'cd src && cargo build --release -j $(JOBS)'
+	docker-compose run --rm client concc -C src -w $(WORKERS) 'cargo build --release -j $(JOBS)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: remote-build
@@ -23,13 +22,12 @@ remote-build: buildenv remote-clean | src
 	docker save $(BUILDENV) | docker -H ssh://$(REMOTE) load
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
-	sleep 1
-	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'cd src && cargo build --release -j $(JOBS)'
+	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -C src -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'cargo build --release -j $(JOBS)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: check
 check: build
-	docker-compose run --rm client concc -w $(WORKERS) 'cd src && cargo test --release -j $(JOBS)'
+	docker-compose run --rm client concc -C src -w $(WORKERS) 'cargo test --release -j $(JOBS)'
 
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all

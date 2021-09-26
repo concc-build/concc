@@ -23,9 +23,9 @@ docker-compose up -d --scale worker=2 worker
 Then, build it with worker containers:
 
 ```shell
-docker-compose run --rm client concc \
+docker-compose run --rm client concc -C src \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'make -C src -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
+  'make -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
 ```
 
 Using `docker stats`, you can confirm that build jobs will be distributed to the
@@ -57,7 +57,7 @@ docker -H ssh://$REMOTE run --name gcc-worker --rm --init -d \
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 2222:22/tcp client concc \
-  -c $(hostname):2222 -w $REMOTE:2222 \
-  'make -C src -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
+docker-compose run --rm -p 2222:22/tcp client \
+  concc -C src -c $(hostname):2222 -w $REMOTE:2222 \
+  'make -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
 ```

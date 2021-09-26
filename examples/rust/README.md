@@ -23,9 +23,9 @@ docker-compose up -d --scale worker=2 worker
 Then, build it with the worker containers:
 
 ```shell
-docker-compose run --rm client concc \
+docker-compose run --rm client concc -C src \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'cd src; cargo build --release -j $(concc-worker-pool limit)'
+  'cargo build --release -j $(concc-worker-pool limit)'
 ```
 
 Using `docker stats`, you can confirm that build jobs will be distributed to the worker containers.
@@ -53,7 +53,7 @@ docker -H ssh://$REMOTE run --name rust-worker --rm --init -d --device /dev/fuse
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 2222:22/tcp \
-  client concc -c $(hostname):2222 -w $REMOTE:2222 \
-  'cd src; cargo build --release -j $(concc-worker-pool limit)'
+docker-compose run --rm -p 2222:22/tcp client \
+  concc -C src -c $(hostname):2222 -w $REMOTE:2222 \
+  'cargo build --release -j $(concc-worker-pool limit)'
 ```

@@ -33,16 +33,16 @@ docker-compose up -d --scale worker=2 worker
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc -l \
-  'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+docker-compose run --rm client concc -C src -l \
+  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build a target with worker containers:
 
 ```shell
-docker-compose run --rm client concc \
+docker-compose run --rm client concc -C src \
   -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'autoninja -C src/out/Default -j $(concc-worker-pool limit) chrome'
+  'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```
 
 Building chrome takes a long time depending on your environment.  We recommend to build nasm
@@ -68,13 +68,14 @@ docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /de
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc -l \
-  'cd src && gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+docker-compose run --rm client concc -C src -l \
+  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 2222:22/tcp client concc -c $(hostname):2222 -w $REMOTE:2222 \
-  'autoninja -C src/out/Default -j $(concc-worker-pool limit) chrome'
+docker-compose run --rm -p 2222:22/tcp client \
+  concc -C src -c $(hostname):2222 -w $REMOTE:2222 \
+  'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```
