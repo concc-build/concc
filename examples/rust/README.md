@@ -3,15 +3,15 @@
 ## Make a buildenv image
 
 ```shell
-tar --exclude src -ch . | docker build -t rust-buildenv -
+tar --exclude workspace -ch . | docker build -t rust-buildenv -
 ```
 
 ## Build with local worker containers
 
-Clone some source tree into the `src` directory:
+Clone some source tree into the `workspace/src` directory:
 
 ```shell
-git clone --depth=1 https://github.com/BurntSushi/ripgrep.git src
+git clone --depth=1 https://github.com/BurntSushi/ripgrep.git workspace/src
 ```
 
 Launch worker containers:

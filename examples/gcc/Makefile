@@ -16,14 +16,14 @@ all: build
 
 # Worker containers will be kept running for debugging.
 .PHONY: build
-build: buildenv local-clean | src
+build: buildenv local-clean | workspace
 	docker-compose up -d --scale worker=$(SCALE) worker
 	docker-compose run --rm client concc -C src ./autogen.sh
 	docker-compose run --rm client concc -C src -w $(WORKERS) 'make -j $(JOBS) CC=$(CC)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv remote-clean | src
+remote-build: buildenv remote-clean | workspace
 	docker save $(BUILDENV) | docker -H ssh://$(REMOTE) load
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
@@ -38,11 +38,15 @@ check: build
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
 clean-all: src-clean local-clean remote-clean
-	rm -rf src
+	rm -rf workspace
 	docker image rm -f $(BUILDENV)
 
 .PHONY: clean
 clean: src-clean local-clean
+
+.PHONY: src-clean
+src-clean:
+	-make -C workspace/src clean
 
 .PHONY: local-clean
 local-clean:
@@ -56,11 +60,7 @@ remote-clean:
 
 .PHONY: buildenv
 buildenv:
-	tar --exclude src -ch . | docker build -t $(BUILDENV) -
+	tar --exclude workspace -ch . | docker build -t $(BUILDENV) -
 
-src:
-	git clone --depth=1 $(REPO) src
-
-.PHONY: src-clean
-src-clean:
-	-make -C src clean
+workspace:
+	git clone --depth=1 $(REPO) workspace/src

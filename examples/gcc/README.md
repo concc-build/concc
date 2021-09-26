@@ -3,15 +3,15 @@
 ## Make a buildenv image
 
 ```shell
-tar --exclude src -ch . | docker build -t gcc-buildenv -
+tar --exclude workspace -ch . | docker build -t gcc-buildenv -
 ```
 
 ## Build with local worker containers
 
-Clone some source tree into the `src` directory:
+Clone some source tree into the `workspace/src` directory:
 
 ```shell
-git clone --depth=1 https://github.com/facebook/zstd.git src
+git clone --depth=1 https://github.com/facebook/zstd.git workspace/src
 ```
 
 Launch local worker containers:

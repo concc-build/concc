@@ -1,6 +1,2 @@
-/.cipd/
-/.gclient
-/.gclient_entries
 /.gitignore
-/_bad_scm/
-/src/
+/workspace/

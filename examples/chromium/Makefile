@@ -15,19 +15,17 @@ all: build
 
 # Worker containers will be kept running for debugging.
 .PHONY: build
-build: buildenv local-clean | src
+build: buildenv local-clean | workspace
 	docker-compose up -d --scale worker=$(SCALE) worker
-	sleep 1
 	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 	docker-compose run --rm client concc -C src -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv remote-clean | src
+remote-build: buildenv remote-clean | workspace
 	docker save $(BUILDENV) | docker -H ssh://$(REMOTE) load
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
-	sleep 1
 	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 	docker-compose run --rm -p $(SSH_PORT):22/tcp client concc -C src -c $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
@@ -46,6 +44,10 @@ clean-all: src-clean local-clean remote-clean
 .PHONY: clean
 clean: src-clean local-clean
 
+.PHONY: src-clean
+src-clean:
+	rm -rf workspace/src/out
+
 .PHONY: local-clean
 local-clean:
 	docker-compose down -v
@@ -58,13 +60,9 @@ remote-clean:
 
 .PHONY: buildenv
 buildenv:
-	tar --exclude src -ch . | docker build -t $(BUILDENV) --build-arg='CHROMIUM=$(CHROMIUM)' -
+	tar --exclude workspace -ch . | docker build -t $(BUILDENV) --build-arg='CHROMIUM=$(CHROMIUM)' -
 
-src:
-	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) src
+workspace:
+	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
 	docker-compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker-compose run --rm client concc -l gclient sync --force
-
-.PHONY: src-clean
-src-clean:
-	rm -rf src/out

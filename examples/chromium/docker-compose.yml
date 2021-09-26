@@ -5,7 +5,7 @@ services:
     image: chromium-buildenv
     init: true
     volumes:
-      - .:/workspace
+      - ./workspace:/workspace
       - ./scripts:/opt/concc/scripts
 
   worker:

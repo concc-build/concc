@@ -3,7 +3,7 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude src -ch . | \
+tar --exclude workspace -ch . | \
   docker build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' -
 ```
 
@@ -11,7 +11,7 @@ tar --exclude src -ch . | \
 
 ```shell
 git clone --depth=1 --branch=94.0.4606.54 \
-  https://chromium.googlesource.com/chromium/src.git src
+  https://chromium.googlesource.com/chromium/src.git workspace/src
 docker-compose run --rm client concc -l \
   gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
 docker-compose run --rm client concc -l gclient sync --force

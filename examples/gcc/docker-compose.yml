@@ -5,7 +5,7 @@ services:
     image: gcc-buildenv
     init: true
     volumes:
-      - .:/workspace
+      - ./workspace:/workspace
     # We cannot define CC as an environment variable so that `configure` works
     # properly.
 
