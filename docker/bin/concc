@@ -8,8 +8,7 @@ BASEDIR=$(cd $(dirname $0); pwd)
 DEFAULT_SSH_PORT=22
 
 WORKDIR=$(pwd)
-START_SSH=1
-CLIENT=$(hostname)
+PROJECT=$(hostname)
 WORKERS=
 VERBOSE=0
 
@@ -28,9 +27,9 @@ OPTIONS:
   -l, --local
     Run jobs locally.
 
-  -c, --client <client> [default: '$CLIENT']
-    A colon-separated pair of the hostname and the port number of the client
-    container in the form <client_host>[:<client_port>].
+  -p, --project <client> [default: '$PROJECT']
+    A colon-separated pair of the hostname and the port number of the project
+    container in the form <hostname>[:<port>].
 
   -w, --workers <workers> [default: '$WORKERS']
     A comma-separated list of worker containers to be connected.
@@ -73,11 +72,10 @@ do
       ;;
     '-l' | '--local')
       export CONCC_RUN_LOCALLY=1
-      START_SSH=
       shift
       ;;
-    '-c' | '--client')
-      CLIENT="$2"
+    '-p' | '--project')
+      PROJECT="$2"
       shift 2
       ;;
     '-w' | '--workers')
@@ -96,16 +94,10 @@ done
 
 SCRIPT="$@"
 
-if [ "$START_SSH" = 1 ]
-then
-  vlog 1 "Starting SSH server..."
-  service ssh start
-fi
-
-CLIENT_HOST=$(echo "$CLIENT:" | cut -d ':' -f 1)
-CLIENT_PORT=$(echo "$CLIENT:" | cut -d ':' -f 2)
-CLIENT_PORT=${CLIENT_PORT:-$DEFAULT_SSH_PORT}
-CLIENT="$CLIENT_HOST:$CLIENT_PORT"
+PROJECT_HOST=$(echo "$PROJECT:" | cut -d ':' -f 1)
+PROJECT_PORT=$(echo "$PROJECT:" | cut -d ':' -f 2)
+PROJECT_PORT=${PROJECT_PORT:-$DEFAULT_SSH_PORT}
+PROJECT="$PROJECT_HOST:$PROJECT_PORT"
 
 CONCC_UID=$(ls -ld /workspace | cut -d ' ' -f 3)
 if getent passwd $CONCC_UID
@@ -130,7 +122,7 @@ chown -R concc:concc /home/concc/.ssh
 if [ -x /opt/concc/scripts/setup-client ]
 then
   vlog 1 "Run setup-client..."
-  /opt/concc/scripts/setup-client $CLIENT
+  /opt/concc/scripts/setup-client $PROJECT
 fi
 
 vlog 1 "Initializing the worker pool..."
@@ -143,20 +135,15 @@ do
   WORKER_PORT=${WORKER_PORT:-$DEFAULT_SSH_PORT}
   WORKER="$WORKER_HOST:$WORKER_PORT"
 
-  until ssh -O check -p $WORKER_PORT $WORKER_HOST
-  do
-    vlog 1 "$WORKER: Establishing a SSH control master connection..."
-    ssh -p $WORKER_PORT $WORKER_HOST :
-  done
-
-  vlog 1 "$WORKER: Mounting the workspace directory..."
-  ssh -p $WORKER_PORT $WORKER_HOST \
-    sshfs -p $CLIENT_PORT -o idmap=user concc@$CLIENT_HOST:/workspace /workspace
+  vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
+  SSHFS_OPTIONS='password_stdin,idmap=user,cache=yes,kernel_cache'
+  cat /run/secrets/concc | cut -d ':' -f 2 | ssh -p $WORKER_PORT $WORKER_HOST \
+    sshfs -p $PROJECT_PORT -o $SSHFS_OPTIONS concc@$PROJECT_HOST:/workspace /workspace
 
   if [ -x /opt/concc/scripts/setup-worker ]
   then
     vlog 1 "Running setup-worker..."
-    /opt/concc/scripts/setup-worker $CLIENT $WORKER
+    /opt/concc/scripts/setup-worker $PROJECT $WORKER
   fi
 
   LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)

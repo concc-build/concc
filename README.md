@@ -74,6 +74,12 @@ The component diagram is show below:
    +------>| Client Container |<------------| Source Tree |
    |       +------------------+    Mount    +-------------+
    |          |                                 |
+   |          |                                 | Mount
+   |          |                                 V
+   |          |                          +-------------------+
+   |          |                          | Project Container |
+   |          |                          +-------------------+
+   |          |                                 |
 ---+----------+---------------------------------+----------------------
    |          |               Remote Machine    |
    |          |                                 |
@@ -81,8 +87,8 @@ The component diagram is show below:
    |          V                                 |
    |       +------------------+                 |
    +------>| Worker Container |<----------------+
-           +------------------+    Mount using SSHFS
-                                   via Client Container
+           +------------------+    Mount the source tree
+                                   via Project Container
                                    with R/W permission
 ```
 

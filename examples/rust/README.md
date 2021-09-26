@@ -3,7 +3,8 @@
 ## Make a buildenv image
 
 ```shell
-tar --exclude workspace -ch . | docker build -t rust-buildenv -
+tar --exclude secrets.txt --exclude workspace -ch . | \
+  docker build -t rust-buildenv -
 ```
 
 ## Build with local worker containers
@@ -20,11 +21,18 @@ Launch worker containers:
 docker-compose up -d --scale worker=2 worker
 ```
 
+Launch a project container:
+
+```shell
+docker-compose up -d project
+```
+
 Then, build it with the worker containers:
 
 ```shell
 docker-compose run --rm client concc -C src \
-  -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+  -p "$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
+  -w "$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
   'cargo build --release -j $(concc-worker-pool limit)'
 ```
 
@@ -50,10 +58,16 @@ docker -H ssh://$REMOTE run --name rust-worker --rm --init -d --device /dev/fuse
   -p 2222:22/tcp --privileged rust-buildenv concc-worker
 ```
 
+Launch a project container:
+
+```shell
+docker-compose up -d project
+```
+
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 2222:22/tcp client \
-  concc -C src -c $(hostname):2222 -w $REMOTE:2222 \
+docker-compose run --rm client \
+  concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
   'cargo build --release -j $(concc-worker-pool limit)'
 ```

@@ -7,6 +7,8 @@ services:
     volumes:
       - ./workspace:/workspace
       - ./scripts:/opt/concc/scripts
+    secrets:
+      - concc
 
   worker:
     image: chromium-buildenv
@@ -17,3 +19,18 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/fuse
+
+  project:
+    image: atmoz/sftp  # Use corilus/sftp for debugging
+    init: true
+    ports:
+      - '2222:22/tcp'
+    volumes:
+      - ./workspace:/home/concc/workspace
+      - ./secrets.txt:/etc/sftp/users.conf:ro
+    secrets:
+      - concc
+
+secrets:
+  concc:
+    file: ./secrets.txt

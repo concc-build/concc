@@ -6,6 +6,8 @@ services:
     init: true
     volumes:
       - ./workspace:/workspace
+    secrets:
+      - concc
     # We cannot define CC as an environment variable so that `configure` works
     # properly.
 
@@ -18,3 +20,18 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/fuse
+
+  project:
+    image: atmoz/sftp  # Use corilus/sftp for debugging
+    init: true
+    ports:
+      - '2222:22/tcp'
+    volumes:
+      - ./workspace:/home/concc/workspace
+      - ./secrets.txt:/etc/sftp/users.conf:ro
+    secrets:
+      - concc
+
+secrets:
+  concc:
+    file: ./secrets.txt

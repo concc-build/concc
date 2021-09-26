@@ -3,7 +3,7 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude workspace -ch . | \
+tar --exclude secrets.txt --exclude workspace -ch . | \
   docker build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' -
 ```
 
@@ -30,6 +30,12 @@ Launch worker containers:
 docker-compose up -d --scale worker=2 worker
 ```
 
+Launch a project container:
+
+```shell
+docker-compose up -d project
+```
+
 Generate Ninja files:
 
 ```shell
@@ -41,7 +47,8 @@ Then, build a target with worker containers:
 
 ```shell
 docker-compose run --rm client concc -C src \
-  -w "$(docker-compose ps -q | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+  -p "$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
+  -w "$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
   'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```
 
@@ -61,8 +68,15 @@ Client and worker containers have to be created from the **same** image so that 
 Launch a worker container on a remote machine:
 
 ```shell
-docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d --device /dev/fuse \
-  -p 2222:22/tcp --privileged chromium-buildenv concc-worker
+docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d \
+  --device /dev/fuse --privileged -p 2222:22/tcp chromium-buildenv \
+  concc-worker
+```
+
+Launch a project container:
+
+```shell
+docker-compose up -d project
 ```
 
 Generate Ninja files:
@@ -75,7 +89,7 @@ docker-compose run --rm client concc -C src -l \
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm -p 2222:22/tcp client \
-  concc -C src -c $(hostname):2222 -w $REMOTE:2222 \
+docker-compose run --rm client \
+  concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
   'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```
