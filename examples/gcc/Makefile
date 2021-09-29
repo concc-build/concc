@@ -42,6 +42,7 @@ check: build
 clean-all: src-clean local-clean remote-clean
 	rm -rf secrets.txt workspace
 	docker image rm -f $(BUILDENV)
+	docker image rm -f concc/tools
 
 .PHONY: clean
 clean: src-clean local-clean
@@ -61,8 +62,12 @@ remote-clean:
 	docker -H ssh://$(REMOTE) image rm -f $(BUILDENV)
 
 .PHONY: buildenv
-buildenv:
+buildenv: concc-tools
 	tar --exclude secrets.txt --exclude workspace -ch . | docker build -t $(BUILDENV) -
+
+.PHONY: concc-tools
+concc-tools:
+	make -C ../../docker
 
 workspace:
 	git clone --depth=1 $(REPO) workspace/src

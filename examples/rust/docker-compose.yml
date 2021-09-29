@@ -9,7 +9,7 @@ services:
     secrets:
       - concc
     environment:
-      RUSTC_WRAPPER: /usr/local/bin/concc-dispatch
+      RUSTC_WRAPPER: /opt/concc/bin/concc-dispatch
 
   worker:
     image: rust-buildenv

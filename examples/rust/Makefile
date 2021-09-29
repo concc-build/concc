@@ -36,6 +36,7 @@ check: build
 clean-all: src-clean local-clean remote-clean
 	rm -rf secrets.txt workspace
 	docker image rm -f $(BUILDENV)
+	docker image rm -f concc/tools
 
 .PHONY: clean
 clean: src-clean local-clean

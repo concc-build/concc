@@ -1,7 +1,7 @@
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y --no-install-recommends gosu python3 ssh sshfs
+apt-get install -y --no-install-recommends gosu ssh sshfs
 
 sed -i 's|#PasswordAuthentication yes|PasswordAuthentication no|' /etc/ssh/sshd_config
 
@@ -14,14 +14,6 @@ Host *
   ControlMaster auto
   ControlPersist 1m
 EOF
-
-# The python3 executable file may be replaced with a script file in order to distribute executions
-# of python3 scripts onto worker containers.  Some of executable files contained in //docker/bin
-# are python scripts which have to be executed on the client container.  We copy the python3
-# executable file into /opt/concc/bin/ and specify it in the shebang in each script file.
-PYTHON3=$(which python3)
-mkdir -p /opt/concc/bin
-cp $PYTHON3 /opt/concc/bin/python3
 
 # cleanup
 apt-get clean
