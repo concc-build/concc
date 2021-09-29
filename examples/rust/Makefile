@@ -1,11 +1,17 @@
+EMPTY :=
+SPACE := $(EMPTY) $(EMPTY)
+SEP := ,
+
 BUILDENV := rust-buildenv
 REMOTE_CONTAINER := rust-worker
 SSH_PORT := 2222
 REPO := https://github.com/BurntSushi/ripgrep.git
 SCALE := 2
+REMOTES ?=
 
 PROJECT := $$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')
 WORKERS := $$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')
+REMOTE_WORKERS := $(subst $(SPACE),$(SEP),$(addsuffix :$(SSH_PORT),$(REMOTES)))
 JOBS := $$(concc-worker-pool limit)
 
 .PHONY: all
@@ -20,11 +26,11 @@ build: buildenv local-clean | secrets.txt workspace
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
 remote-build: buildenv remote-clean | secrets.txt workspace
-	docker save $(BUILDENV) | docker -H ssh://$(REMOTE) load
+	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
-	docker -H ssh://$(REMOTE) run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker
+	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
 	docker-compose up -d project
-	docker-compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE):$(SSH_PORT) 'cargo build --release -j $(JOBS)'
+	docker-compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) 'cargo build --release -j $(JOBS)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: check
@@ -51,9 +57,9 @@ local-clean:
 
 .PHONY: remote-clean
 remote-clean:
-	@if [ -z "$(REMOTE)" ]; then echo 'ERROR: REMOTE not specified' >&2; false; fi
-	-docker -H ssh://$(REMOTE) stop $(REMOTE_CONTAINER)
-	docker -H ssh://$(REMOTE) image rm -f $(BUILDENV)
+	@if [ -z "$(REMOTES)" ]; then echo 'ERROR: REMOTES not specified' >&2; false; fi
+	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE stop $(REMOTE_CONTAINER) || true; done
+	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE image rm -f $(BUILDENV); done
 
 .PHONY: buildenv
 buildenv:
