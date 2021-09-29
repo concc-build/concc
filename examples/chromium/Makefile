@@ -16,6 +16,7 @@ REMOTE_WORKERS := $(subst $(SPACE),$(SEP),$(addsuffix :$(SSH_PORT),$(REMOTES)))
 JOBS := $$(concc-worker-pool limit)
 
 TARGETS ?= chrome
+GN_ARGS := "clang_base_path=\"/opt/clang\" compiler_timing=true cc_wrapper=\"concc-dispatch\""
 
 .PHONY: all
 all: build
@@ -24,7 +25,7 @@ all: build
 .PHONY: build
 build: buildenv local-clean | secrets.txt workspace
 	docker-compose up -d --scale worker=$(SCALE) worker project
-	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
 	docker-compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Project and worker containers will be kept running for debugging.
@@ -34,7 +35,7 @@ remote-build: buildenv remote-clean | secrets.txt workspace
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
 	docker-compose up -d project
-	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
 	docker-compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Project and worker containers will be kept running for debugging.
