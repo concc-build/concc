@@ -1,4 +1,4 @@
-FROM concc/tools AS tools
+FROM masnagam/concc-tools AS tools
 
 FROM rust
 COPY --from=tools /opt/concc /opt/concc/

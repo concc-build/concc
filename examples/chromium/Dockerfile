@@ -1,4 +1,4 @@
-FROM concc/tools AS tools
+FROM masnagam/concc-tools AS tools
 
 FROM ubuntu:focal
 ARG CHROMIUM=main  # commit-sh

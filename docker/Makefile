@@ -1,4 +1,4 @@
-IMAGE := concc/tools
+IMAGE := masnagam/concc-tools
 
 .PHONY: all
 all: image
