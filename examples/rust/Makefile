@@ -62,8 +62,12 @@ remote-clean:
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE image rm -f $(BUILDENV); done
 
 .PHONY: buildenv
-buildenv:
+buildenv: concc-tools
 	tar --exclude secrets.txt --exclude workspace -ch . | docker build -t $(BUILDENV) -
+
+.PHONY: concc-tools
+concc-tools:
+	make -C ../../docker
 
 workspace:
 	git clone --depth=1 $(REPO) workspace/src

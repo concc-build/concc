@@ -69,8 +69,12 @@ remote-clean:
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE image rm -f $(BUILDENV); done
 
 .PHONY: buildenv
-buildenv:
+buildenv: concc-tools
 	tar --exclude secrets.txt --exclude workspace -ch . | docker build -t $(BUILDENV) --build-arg='CHROMIUM=$(CHROMIUM)' -
+
+.PHONY: concc-tools
+concc-tools:
+	make -C ../../docker
 
 workspace: | secrets.txt
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
