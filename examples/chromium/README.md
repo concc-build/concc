@@ -12,9 +12,9 @@ tar --exclude secrets.txt --exclude workspace -ch . | \
 ```shell
 git clone --depth=1 --branch=94.0.4606.54 \
   https://chromium.googlesource.com/chromium/src.git workspace/src
-docker-compose run --rm client concc -l \
+docker compose run --rm client concc -l \
   gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
-docker-compose run --rm client concc -l gclient sync --force
+docker compose run --rm client concc -l gclient sync --force
 ```
 
 This may take several hours depending on your network environment.
@@ -27,28 +27,28 @@ use Docker Desktop for Mac.
 Launch worker containers:
 
 ```shell
-docker-compose up -d --scale worker=2 worker
+docker compose up -d --scale worker=2 worker
 ```
 
 Launch a project container:
 
 ```shell
-docker-compose up -d project
+docker compose up -d project
 ```
 
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc -C src -l \
+docker compose run --rm client concc -C src -l \
   'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build a target with worker containers:
 
 ```shell
-docker-compose run --rm client concc -C src \
-  -p "$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
-  -w "$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+docker compose run --rm client concc -C src \
+  -p "$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
+  -w "$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
   'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```
 
@@ -76,20 +76,20 @@ docker -H ssh://$REMOTE run --name chromium-buildenv --rm --init -d \
 Launch a project container:
 
 ```shell
-docker-compose up -d project
+docker compose up -d project
 ```
 
 Generate Ninja files:
 
 ```shell
-docker-compose run --rm client concc -C src -l \
+docker compose run --rm client concc -C src -l \
   'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm client \
+docker compose run --rm client \
   concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
   'autoninja -C out/Default -j $(concc-worker-pool limit) chrome'
 ```

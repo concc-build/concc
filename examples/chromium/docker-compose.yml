@@ -18,7 +18,7 @@ services:
     cap_add:
       - SYS_ADMIN
     devices:
-      - /dev/fuse
+      - /dev/fuse:/dev/fuse
 
   project:
     image: atmoz/sftp  # Use corilus/sftp for debugging

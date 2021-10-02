@@ -18,21 +18,21 @@ git clone --depth=1 https://github.com/BurntSushi/ripgrep.git workspace/src
 Launch worker containers:
 
 ```shell
-docker-compose up -d --scale worker=2 worker
+docker compose up -d --scale worker=2 worker
 ```
 
 Launch a project container:
 
 ```shell
-docker-compose up -d project
+docker compose up -d project
 ```
 
 Then, build it with the worker containers:
 
 ```shell
-docker-compose run --rm client concc -C src \
-  -p "$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
-  -w "$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+docker compose run --rm client concc -C src \
+  -p "$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
+  -w "$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
   'cargo build --release -j $(concc-worker-pool limit)'
 ```
 
@@ -61,13 +61,13 @@ docker -H ssh://$REMOTE run --name rust-worker --rm --init -d --device /dev/fuse
 Launch a project container:
 
 ```shell
-docker-compose up -d project
+docker compose up -d project
 ```
 
 Then, build with the remote worker container:
 
 ```shell
-docker-compose run --rm client \
+docker compose run --rm client \
   concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
   'cargo build --release -j $(concc-worker-pool limit)'
 ```

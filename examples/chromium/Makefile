@@ -2,6 +2,7 @@ EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
 SEP := ,
 
+CONCC_TOOLS := masnagam/concc-tools
 BUILDENV := chromium-buildenv
 REMOTE_CONTAINER := chromium-worker
 SSH_PORT := 2222
@@ -10,8 +11,8 @@ REPO := https://chromium.googlesource.com/chromium/src.git
 SCALE := 2
 REMOTES ?=
 
-PROJECT := $$(docker-compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')
-WORKERS := $$(docker-compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')
+PROJECT := $$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')
+WORKERS := $$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')
 REMOTE_WORKERS := $(subst $(SPACE),$(SEP),$(addsuffix :$(SSH_PORT),$(REMOTES)))
 JOBS := $$(concc-worker-pool limit)
 
@@ -24,9 +25,9 @@ all: build
 # Project and worker containers will be kept running for debugging.
 .PHONY: build
 build: buildenv local-clean | secrets.txt workspace
-	docker-compose up -d --scale worker=$(SCALE) worker project
-	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
-	docker-compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
+	docker compose up -d --scale worker=$(SCALE) worker project
+	docker compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
+	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
@@ -34,22 +35,22 @@ remote-build: buildenv remote-clean | secrets.txt workspace
 	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
-	docker-compose up -d project
-	docker-compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
-	docker-compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
+	docker compose up -d project
+	docker compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
+	docker compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: check
 check: build
-	docker-compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) blink_unittests'
-	docker-compose run --rm client concc -C src -l 'out/Default/blink_unittests'
+	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) blink_unittests'
+	docker compose run --rm client concc -C src -l 'out/Default/blink_unittests'
 
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
 clean-all: src-clean local-clean remote-clean
 	rm -rf secrets.txt workspace
 	docker image rm -f $(BUILDENV)
-	docker image rm -f concc/tools
+	docker image rm -f $(CONCC_TOOLS)
 
 .PHONY: clean
 clean: src-clean local-clean
@@ -60,7 +61,7 @@ src-clean:
 
 .PHONY: local-clean
 local-clean:
-	docker-compose down -v
+	docker compose down -v
 
 .PHONY: remote-clean
 remote-clean:
@@ -78,8 +79,8 @@ concc-tools:
 
 workspace: | secrets.txt
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
-	docker-compose run --rm client concc -l gclient config --unmanaged $(REPO)
-	docker-compose run --rm client concc -l gclient sync --force
+	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
+	docker compose run --rm client concc -l gclient sync --force
 
 secrets.txt:
 	echo "concc:chromium:$(shell id -u):$(shell id -g):workspace" >secrets.txt
