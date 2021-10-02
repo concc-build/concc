@@ -8,7 +8,7 @@ services:
       - ./workspace:/workspace
       - ./scripts:/opt/concc/scripts
     secrets:
-      - concc
+      - password
 
   worker:
     image: chromium-buildenv
@@ -27,10 +27,8 @@ services:
       - '2222:22/tcp'
     volumes:
       - ./workspace:/home/concc/workspace
-      - ./secrets.txt:/etc/sftp/users.conf:ro
-    secrets:
-      - concc
+      - ./users.conf:/etc/sftp/users.conf:ro
 
 secrets:
-  concc:
-    file: ./secrets.txt
+  password:
+    file: ./password

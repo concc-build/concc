@@ -1,7 +1,7 @@
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y --no-install-recommends gosu ssh sshfs
+apt-get install -y --no-install-recommends gosu ssh sshfs sshpass
 
 sed -i 's|#PasswordAuthentication yes|PasswordAuthentication no|' /etc/ssh/sshd_config
 

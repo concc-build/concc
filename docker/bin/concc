@@ -136,8 +136,9 @@ do
   WORKER="$WORKER_HOST:$WORKER_PORT"
 
   vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
-  SSHFS_OPTIONS='password_stdin,idmap=user,cache=yes,kernel_cache'
-  cat /run/secrets/concc | cut -d ':' -f 2 | ssh -p $WORKER_PORT $WORKER_HOST \
+  SSHFS_OPTIONS="ssh_command='sshpass -e ssh',idmap=user,cache=yes,kernel_cache"
+  ssh -p $WORKER_PORT $WORKER_HOST \
+    env SSHPASS="$(cat /run/secrets/password)" \
     sshfs -p $PROJECT_PORT -o $SSHFS_OPTIONS concc@$PROJECT_HOST:/workspace /workspace
 
   if [ -x /opt/concc/scripts/setup-worker ]

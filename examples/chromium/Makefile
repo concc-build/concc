@@ -24,14 +24,14 @@ all: build
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: build
-build: buildenv local-clean | secrets.txt workspace
+build: buildenv local-clean | secrets workspace
 	docker compose up -d --scale worker=$(SCALE) worker project
 	docker compose run --rm client concc -C src -l 'gn gen out/Default --args=$(GN_ARGS)'
 	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'autoninja -C out/Default -j $(JOBS) $(TARGETS)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv remote-clean | secrets.txt workspace
+remote-build: buildenv remote-clean | secrets workspace
 	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
@@ -48,7 +48,8 @@ check: build
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
 clean-all: src-clean local-clean remote-clean
-	rm -rf secrets.txt workspace
+	make secrets-clean
+	rm -rf workspace
 	docker image rm -f $(BUILDENV)
 	docker image rm -f $(CONCC_TOOLS)
 
@@ -71,16 +72,26 @@ remote-clean:
 
 .PHONY: buildenv
 buildenv: concc-tools
-	tar --exclude secrets.txt --exclude workspace -ch . | docker build -t $(BUILDENV) --build-arg='CHROMIUM=$(CHROMIUM)' -
+	tar --exclude secrets --exclude workspace -ch . | docker build -t $(BUILDENV) --build-arg='CHROMIUM=$(CHROMIUM)' -
 
 .PHONY: concc-tools
 concc-tools:
 	make -C ../../docker
 
-workspace: | secrets.txt
+workspace: | secrets
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
 	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker compose run --rm client concc -l gclient sync --force
 
-secrets.txt:
-	echo "concc:chromium:$(shell id -u):$(shell id -g):workspace" >secrets.txt
+.PHONY: secrets
+secrets: users.conf password
+
+.PHONY: secrets-clean
+secrets-clean:
+	rm -rf users.conf password
+
+users.conf: password
+	echo "concc:$(shell cat $<):$(shell id -u):$(shell id -g):workspace" >$@
+
+password:
+	echo 'chromium' >$@

@@ -24,19 +24,19 @@ all: build
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: build
-build: buildenv local-clean | secrets.txt workspace
+build: buildenv local-clean | secrets workspace
 	docker compose up -d --scale worker=$(SCALE) worker project
-	docker compose run --rm client concc -C src ./autogen.sh
+	docker compose run --rm client concc -C src -l ./autogen.sh
 	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'make -j $(JOBS) CC=$(CC)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv remote-clean | secrets.txt workspace
+remote-build: buildenv remote-clean | secrets workspace
 	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
 	docker compose up -d project
-	docker compose run --rm client concc -C src ./autogen.sh
+	docker compose run --rm client concc -C src -l ./autogen.sh
 	docker compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) 'make -j $(JOBS) CC=$(CC)'
 
 # Project and worker containers will be kept running for debugging.
@@ -47,7 +47,8 @@ check: build
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
 clean-all: src-clean local-clean remote-clean
-	rm -rf secrets.txt workspace
+	make secrets-clean
+	rm -rf workspace
 	docker image rm -f $(BUILDENV)
 	docker image rm -f $(CONCC_TOOLS)
 
@@ -79,5 +80,15 @@ concc-tools:
 workspace:
 	git clone --depth=1 $(REPO) workspace/src
 
-secrets.txt:
-	echo "concc:gcc:$(shell id -u):$(shell id -g):workspace" >secrets.txt
+.PHONY: secrets
+secrets: users.conf password
+
+.PHONY: secrets-clean
+secrets-clean:
+	rm -rf users.conf password
+
+users.conf: password
+	echo "concc:$(shell cat $<):$(shell id -u):$(shell id -g):workspace" >$@
+
+password:
+	echo 'gcc' >$@

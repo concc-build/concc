@@ -1,3 +1,4 @@
 /.gitignore
-/secrets.txt
+/password
+/users.conf
 /workspace/

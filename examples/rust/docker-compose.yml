@@ -7,7 +7,7 @@ services:
     volumes:
       - ./workspace:/workspace
     secrets:
-      - concc
+      - password
     environment:
       RUSTC_WRAPPER: /opt/concc/bin/concc-dispatch
 
@@ -28,10 +28,8 @@ services:
       - '2222:22/tcp'
     volumes:
       - ./workspace:/home/concc/workspace
-      - ./secrets.txt:/etc/sftp/users.conf:ro
-    secrets:
-      - concc
+      - ./users.conf:/etc/sftp/users.conf:ro
 
 secrets:
-  concc:
-    file: ./secrets.txt
+  password:
+    file: ./password
