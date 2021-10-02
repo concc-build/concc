@@ -25,13 +25,17 @@ all: build
 # Project and worker containers will be kept running for debugging.
 .PHONY: build
 build: buildenv local-clean | secrets workspace
+	make src-clean
+	make local-clean
 	docker compose up -d --scale worker=$(SCALE) worker project
 	docker compose run --rm client concc -C src -l ./autogen.sh
 	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) 'make -j $(JOBS) CC=$(CC)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv remote-clean | secrets workspace
+remote-build: buildenv | secrets workspace
+	make src-clean
+	make remote-clean
 	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
