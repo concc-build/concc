@@ -22,7 +22,8 @@ services:
       - /dev/fuse:/dev/fuse
 
   project:
-    image: atmoz/sftp  # Use corilus/sftp for debugging
+    image: atmoz/sftp
+    #image: corilus/sftp  # for debugging
     init: true
     ports:
       - '2222:22/tcp'

@@ -18,7 +18,7 @@ git clone --depth=1 https://github.com/BurntSushi/ripgrep.git workspace/src
 Launch worker containers:
 
 ```shell
-docker compose up -d --scale worker=2 worker
+docker compose up -d worker
 ```
 
 Launch a project container:

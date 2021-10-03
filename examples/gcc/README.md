@@ -18,7 +18,7 @@ git clone --depth=1 https://github.com/facebook/zstd.git workspace/src
 Launch local worker containers:
 
 ```shell
-docker compose up -d --scale worker=2 worker
+docker compose up -d worker
 ```
 
 Launch a project container:

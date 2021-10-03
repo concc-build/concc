@@ -27,7 +27,7 @@ use Docker Desktop for Mac.
 Launch worker containers:
 
 ```shell
-docker compose up -d --scale worker=2 worker
+docker compose up -d worker
 ```
 
 Launch a project container:

@@ -8,8 +8,6 @@ services:
       - ./workspace:/workspace
     secrets:
       - password
-    environment:
-      RUSTC_WRAPPER: /opt/concc/bin/concc-dispatch
 
   worker:
     image: rust-buildenv
@@ -22,7 +20,8 @@ services:
       - /dev/fuse:/dev/fuse
 
   project:
-    image: atmoz/sftp  # Use corilus/sftp for debugging
+    image: atmoz/sftp
+    #image: corilus/sftp  # for debugging
     init: true
     ports:
       - '2222:22/tcp'
