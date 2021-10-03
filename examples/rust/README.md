@@ -3,8 +3,7 @@
 ## Make a buildenv image
 
 ```shell
-tar --exclude secrets.txt --exclude workspace -ch . | \
-  docker build -t rust-buildenv -
+docker buildx build -t rust-buildenv .
 ```
 
 ## Build with local worker containers

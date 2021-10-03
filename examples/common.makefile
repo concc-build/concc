@@ -86,7 +86,7 @@ remote-clean:
 
 .PHONY: buildenv
 buildenv: concc-tools
-	tar --exclude secrets.txt --exclude workspace -ch . | docker build -t $(BUILDENV) -
+	docker buildx build -t $(BUILDENV) .
 
 .PHONY: concc-tools
 concc-tools:

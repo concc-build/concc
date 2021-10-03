@@ -3,8 +3,7 @@
 ## Build a buildenv image
 
 ```shell
-tar --exclude secrets.txt --exclude workspace -ch . | \
-  docker build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' -
+docker buildx build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' .
 ```
 
 ## Get the Chromium source code

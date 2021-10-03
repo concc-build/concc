@@ -3,8 +3,7 @@
 ## Make a buildenv image
 
 ```shell
-tar --exclude secrets.txt --exclude workspace -ch . | \
-  docker build -t gcc-buildenv -
+docker buildx build -t gcc-buildenv .
 ```
 
 ## Build with local worker containers

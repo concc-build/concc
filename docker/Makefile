@@ -5,4 +5,4 @@ all: image
 
 .PHONY: image
 image:
-	docker build -t $(IMAGE) .
+	docker buildx build -t $(IMAGE) .

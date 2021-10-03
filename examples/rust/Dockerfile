@@ -1,7 +1,5 @@
-FROM masnagam/concc-tools AS tools
-
 FROM rust
-COPY --from=tools /opt/concc /opt/concc/
+COPY --from=masnagam/concc-tools /opt/concc /opt/concc/
 RUN sh -eux /opt/concc/setup.sh
 EXPOSE 22/tcp
 WORKDIR /workspace
