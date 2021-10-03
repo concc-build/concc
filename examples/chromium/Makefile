@@ -19,7 +19,7 @@ ICECC_BUILD_CMD := autoninja -C out/Default -j $(ICECC_JOBS) $(TARGETS)
 CHECK_CMD := autoninja -C out/Default -j $(JOBS) blink_unittests && out/Default/blink_unittests
 SRC_CLEAN_CMD := rm -rf workspace/src/out
 
-workspace:
+workspace: | buildenv secrets
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
 	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker compose run --rm client concc -l gclient sync --force

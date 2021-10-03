@@ -24,7 +24,7 @@ build: local-build
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: local-build
-local-build: buildenv | secrets workspace
+local-build: buildenv secrets workspace
 	make src-clean
 	make local-clean
 	docker compose up -d --scale worker=$(SCALE) worker project
@@ -33,7 +33,7 @@ local-build: buildenv | secrets workspace
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
-remote-build: buildenv | secrets workspace
+remote-build: buildenv secrets workspace
 	make src-clean
 	make remote-clean
 	for REMOTE in $(REMOTES); do docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; done
@@ -44,13 +44,13 @@ remote-build: buildenv | secrets workspace
 	docker compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) '$(TIME) $(BUILD_CMD)'
 
 .PHONY: nondist-build
-nondist-build: buildenv | secrets workspace
+nondist-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(NONDIST_CONFIGURE_CMD)'
 	docker compose run --rm client concc -C src -l '$(TIME) $(NONDIST_BUILD_CMD)'
 
 .PHONY: icecc-build
-icecc-build: buildenv | secrets workspace
+icecc-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(ICECC_CONFIGURE_CMD)'
 	docker compose run --rm -e ICECC_REMOTE_CPP=1 client concc -C src -l '$(ICECCD) && $(TIME) $(ICECC_BUILD_CMD)'
