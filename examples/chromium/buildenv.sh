@@ -9,6 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends ca-certificates curl file git lsb-release
+apt-get install -y --no-install-recommends icecc icecream-sundae
 
 git clone --depth=1 https://chromium.googlesource.com/chromium/tools/depot_tools.git \
   /opt/depot_tools

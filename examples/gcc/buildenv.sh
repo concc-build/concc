@@ -2,6 +2,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends autoconf automake build-essential
+apt-get install -y --no-install-recommends icecc icecream-sundae
 
 # cleanup
 apt-get clean
