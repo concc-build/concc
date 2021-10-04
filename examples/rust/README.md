@@ -6,6 +6,13 @@
 docker buildx build -t rust-buildenv .
 ```
 
+## Create a SFTP account
+
+```shell
+echo "password" >password
+echo "concc:$(cat password):$(id -u):$(id -g):workspace" >users.conf
+```
+
 ## Build with local worker containers
 
 Clone some source tree into the `workspace/src` directory:

@@ -6,6 +6,13 @@
 docker buildx build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' .
 ```
 
+## Create a SFTP account
+
+```shell
+echo "password" >password
+echo "concc:$(cat password):$(id -u):$(id -g):workspace" >users.conf
+```
+
 ## Get the Chromium source code
 
 ```shell
