@@ -14,8 +14,7 @@ REMOTE_WORKERS := $(subst $(SPACE),$(SEP),$(addsuffix :$(SSH_PORT),$(REMOTES)))
 TIME := /usr/bin/time -p
 
 ICECC_SCHED ?= icecc
-ICECC_JOBS ?= 32
-ICECCD := iceccd -d -s $(ICECC_SCHED) && sleep 5
+ICECCD := iceccd -d -m 0 -s $(ICECC_SCHED) && sleep 5
 
 .PHONY: all
 all: build

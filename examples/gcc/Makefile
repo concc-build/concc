@@ -11,9 +11,9 @@ REPO := https://github.com/jemalloc/jemalloc.git
 CONFIGURE_CMD := ./autogen.sh
 BUILD_CMD := make -j $(JOBS) CC=$(CONCC_CC)
 NONDIST_CONFIGURE_CMD := $(CONFIGURE_CMD)
-NONDIST_BUILD_CMD := make -j $(shell nproc)
+NONDIST_BUILD_CMD := make -j $(JOBS)
 ICECC_CONFIGURE_CMD := $(CONFIGURE_CMD)
-ICECC_BUILD_CMD := make -j $(ICECC_JOBS) CC=$(ICECC_CC)
+ICECC_BUILD_CMD := make -j $(JOBS) CC=$(ICECC_CC)
 CHECK_CMD := make -j $(JOBS) CC=$(CONCC_CC) check
 SRC_CLEAN_CMD := make -C workspace/src clean
 
