@@ -11,12 +11,12 @@ BUILDENV := chromium-buildenv
 REMOTE_CONTAINER := chromium-worker
 REPO := https://chromium.googlesource.com/chromium/src.git
 CONFIGURE_CMD := gn gen out/Default --args=$(GN_ARGS)
-BUILD_CMD := autoninja -C out/Default -j $(JOBS) $(TARGETS)
+BUILD_CMD = autoninja -C out/Default -j $(JOBS) $(TARGETS)
 NONDIST_CONFIGURE_CMD := gn gen out/Default --args=$(NONDIST_GN_ARGS)
-NONDIST_BUILD_CMD := $(BUILD_CMD)
+NONDIST_BUILD_CMD = $(BUILD_CMD)
 ICECC_CONFIGURE_CMD := gn gen out/Default --args=$(ICECC_GN_ARGS)
-ICECC_BUILD_CMD := $(BUILD_CMD)
-CHECK_CMD := autoninja -C out/Default -j $(JOBS) blink_unittests && out/Default/blink_unittests
+ICECC_BUILD_CMD = $(BUILD_CMD)
+CHECK_CMD = autoninja -C out/Default -j $(JOBS) blink_unittests && out/Default/blink_unittests
 SRC_CLEAN_CMD := rm -rf workspace/src/out
 
 workspace: | buildenv secrets

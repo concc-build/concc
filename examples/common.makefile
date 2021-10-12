@@ -26,11 +26,11 @@ ICECCD := iceccd -d -m 0 -s $(ICECC_SCHED) && sleep 5
 .PHONY: all
 all: build
 
-build: JOBS ?= $$(concc-worker-pool limit)
 build: local-build
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: local-build
+local-build: JOBS ?= $$(concc-worker-pool limit)
 local-build: buildenv secrets workspace
 	$(MAKE) src-clean
 	$(MAKE) local-clean
@@ -40,6 +40,7 @@ local-build: buildenv secrets workspace
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
+remote-build: JOBS ?= $$(concc-worker-pool limit)
 remote-build: buildenv secrets workspace
 	$(MAKE) src-clean
 	$(MAKE) remote-clean
