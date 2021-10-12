@@ -5,6 +5,7 @@ SEP := ,
 SCALE ?= 1
 REMOTES ?=
 SSH_PORT ?= 2222
+SSHFS_DEBUG ?= 0
 ITERATIONS ?= 10
 
 CONCC_TOOLS := masnagam/concc-tools
@@ -36,7 +37,8 @@ local-build: buildenv secrets workspace
 	$(MAKE) local-clean
 	docker compose up -d --scale worker=$(SCALE) worker project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
-	docker compose run --rm client concc -C src -p $(PROJECT) -w $(WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
+	docker compose run --rm -e CONCC_SSHFS_DEBUG=$(SSHFS_DEBUG) \
+	  client concc -C src -p $(PROJECT) -w $(WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
 # Project and worker containers will be kept running for debugging.
 .PHONY: remote-build
@@ -49,7 +51,8 @@ remote-build: buildenv secrets workspace
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
 	docker compose up -d project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
-	docker compose run --rm client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
+	docker compose run --rm -e CONCC_SSHFS_DEBUG=$(SSHFS_DEBUG) \
+	  client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
 .PHONY: nondist-build
 nondist-build: JOBS ?= $(shell nproc)

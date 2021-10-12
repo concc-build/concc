@@ -128,6 +128,21 @@ fi
 vlog 1 "Initializing the worker pool..."
 gosu concc concc-worker-pool reset
 
+if [ "$CONCC_SSHFS_DEBUG" = 1 ]
+then
+  SSHFS_RUN_MODE='-d'
+else
+  SSHFS_RUN_MODE='-f'
+fi
+cat <<EOF >/tmp/mount.sh
+sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT \
+  -o ssh_command='sshpass -f /tmp/password ssh' \
+  -o idmap=user \
+  -o cache=yes \
+  -o kernel_cache \
+  concc@$PROJECT_HOST:/workspace /workspace
+EOF
+
 for WORKER in $(echo "$WORKERS" | tr ',' ' ')
 do
   WORKER_HOST=$(echo "$WORKER:" | cut -d ':' -f 1)
@@ -135,11 +150,11 @@ do
   WORKER_PORT=${WORKER_PORT:-$DEFAULT_SSH_PORT}
   WORKER="$WORKER_HOST:$WORKER_PORT"
 
-  vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
-  SSHFS_OPTIONS="ssh_command='sshpass -e ssh',idmap=user,cache=yes,kernel_cache"
-  ssh -p $WORKER_PORT $WORKER_HOST \
-    env SSHPASS="$(cat /run/secrets/password)" \
-    sshfs -p $PROJECT_PORT -o $SSHFS_OPTIONS concc@$PROJECT_HOST:/workspace /workspace
+  if ssh -p $WORKER_PORT $WORKER_HOST test -f /tmp/ready
+  then
+    vlog 1 "$WORKER: Already started"
+    continue
+  fi
 
   if [ -x /opt/concc/scripts/setup-worker ]
   then
@@ -152,6 +167,15 @@ do
 
   vlog 1 "Add $WORKER to the worker pool..."
   gosu concc concc-worker-pool add $WORKER $LIMIT
+
+  vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
+  scp -P $WORKER_PORT /tmp/mount.sh $WORKER_HOST:/tmp/mount.sh
+  scp -P $WORKER_PORT /run/secrets/password $WORKER_HOST:/tmp/.password
+  ssh -p $WORKER_PORT $WORKER_HOST mv /tmp/.password /tmp/password
+  while ! ssh -p $WORKER_PORT $WORKER_HOST test -f /tmp/ready
+  do
+    sleep 1
+  done
 done
 
 vlog 1 "Total maximum number of jobs: $(gosu concc concc-worker-pool limit)"
