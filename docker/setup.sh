@@ -2,6 +2,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends gosu ssh sshfs sshpass
+apt-get install -y --no-install-recommends strace  # for tracing syscalls
 apt-get install -y --no-install-recommends time  # for measurements
 
 sed -i 's|#PasswordAuthentication yes|PasswordAuthentication no|' /etc/ssh/sshd_config

@@ -37,6 +37,7 @@ local-build: buildenv secrets workspace
 	$(MAKE) local-clean
 	docker compose up -d --scale worker=$(SCALE) worker project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
+	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm -e CONCC_SSHFS_DEBUG=$(SSHFS_DEBUG) \
 	  client concc -C src -p $(PROJECT) -w $(WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
@@ -51,6 +52,7 @@ remote-build: buildenv secrets workspace
 	for REMOTE in $(REMOTES); do docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(BUILDENV) concc-worker; done
 	docker compose up -d project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
+	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm -e CONCC_SSHFS_DEBUG=$(SSHFS_DEBUG) \
 	  client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
@@ -59,6 +61,7 @@ nondist-build: JOBS ?= $(shell nproc)
 nondist-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(NONDIST_CONFIGURE_CMD)'
+	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm client concc -C src -l '$(TIME_NONDIST) $(NONDIST_BUILD_CMD)'
 
 .PHONY: icecc-build
@@ -66,6 +69,7 @@ icecc-build: JOBS ?= 32
 icecc-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(ICECC_CONFIGURE_CMD)'
+	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm -e ICECC_REMOTE_CPP=1 client concc -C src -l '$(ICECCD) && $(TIME_ICECC) $(ICECC_BUILD_CMD)'
 
 # Project and worker containers will be kept running for debugging.
@@ -93,7 +97,6 @@ $(METRICS_DIR)/index.html: $(METRICS_HTML_PY) $(METRICS_FILES)
 $(METRICS_DIR)/client.times $(METRICS_DIR)/worker.times: | $(METRICS_DIR)
 	@for i in $(shell seq $(ITERATIONS)); \
 	do \
-	  sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches' && \
 	  $(MAKE) -e build \
 	    TIME_CLIENT='$(TIME) -v -a -o /$(METRICS_DIR)/client.times' \
 	    TIME_WORKER='$(TIME) -v -a -o /$(METRICS_DIR)/worker.times'; \
@@ -102,7 +105,6 @@ $(METRICS_DIR)/client.times $(METRICS_DIR)/worker.times: | $(METRICS_DIR)
 $(METRICS_DIR)/nondist.times: | $(METRICS_DIR)
 	@for i in $(shell seq $(ITERATIONS)); \
 	do \
-	  sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches' && \
 	  $(MAKE) -e nondist-build \
 	    TIME_NONDIST='$(TIME) -v -a -o /$(METRICS_DIR)/nondist.times'; \
 	done

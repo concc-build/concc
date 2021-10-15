@@ -1,10 +1,20 @@
 include ../common.makefile
 
+# Using strace
+# ------------
+# Specify GCC like below:
+#
+#   GCC='strace -ttT -ff -o /workspace/strace/gcc gcc'
+#
+# /workspace/strace must be created before building.
+
+GCC ?= gcc
+
 # In this example, only CC commands will be distributed, any command can be
 # distributed theoretically.
-CONCC_CC = "$(TIME_CLIENT) concc-dispatch $(TIME_WORKER) gcc"
-NONDIST_CC = "$(TIME_NONDIST) gcc"
-ICECC_CC = "$(TIME_ICECC) icecc gcc"
+CONCC_CC = "$(TIME_CLIENT) concc-dispatch $(TIME_WORKER) $(GCC)"
+NONDIST_CC = "$(TIME_NONDIST) $(STRACE) $(GCC)"
+ICECC_CC = "$(TIME_ICECC) icecc $(GCC)"
 
 BUILDENV := gcc-buildenv
 REMOTE_CONTAINER := gcc-worker
