@@ -1,13 +1,5 @@
 include ../common.makefile
 
-# Using strace
-# ------------
-# Specify GCC like below:
-#
-#   GCC='strace -ttT -ff -o /workspace/strace/gcc gcc'
-#
-# /workspace/strace must be created before building.
-
 GCC ?= gcc
 
 # In this example, only CC commands will be distributed, any command can be
@@ -30,3 +22,50 @@ SRC_CLEAN_CMD := make -C workspace/src clean
 
 workspace:
 	git clone --depth=1 $(REPO) workspace/src
+
+STRACE_TARGET ?=
+STRACE_DIR := workspace/strace
+STRACE_OPTIONS := -ff -ttt -T -v -xx -X raw -y
+STRACE_OUTDIR := $(STRACE_DIR)/$(STRACE_TARGET).$(JOBS)
+STRACE_JSONL_FILES := $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
+STRACE_ARCHIVE := workspace/strace.tar.xz
+
+.PHONY: strace
+strace: $(STRACE_OUTDIR)
+
+.PHONY: strace-jsonl
+strace-jsonl: $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
+
+.PHONY: strace-archive
+strace-archive: $(STRACE_ARCHIVE)
+
+.PHONY: strace-clean
+strace-clean:
+	@rm -rf $(STRACE_DIR) $(STRACE_ARCHIVE)
+
+$(STRACE_ARCHIVE):
+	@$(MAKE) strace STRACE_TARGET=concc JOBS=1
+	@$(MAKE) strace STRACE_TARGET=concc JOBS=4
+	@$(MAKE) strace STRACE_TARGET=nondist JOBS=1
+	@$(MAKE) strace STRACE_TARGET=nondist JOBS=4
+	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=concc JOBS=1
+	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=concc JOBS=4
+	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=nondist JOBS=1
+	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=nondist JOBS=4
+	@tar -C workspace -cJvf $@ strace
+
+$(STRACE_OUTDIR):
+	@mkdir -p $@
+	@$(MAKE) $(STRACE_TARGET)-build JOBS=$(JOBS) \
+	  GCC='strace $(STRACE_OPTIONS) -o /$@/strace gcc'
+	@for strace in $$(/bin/ls -1 $@/strace.*); \
+	do \
+	  mv $$strace $@/$$(echo $$strace | sed 's/.*\.//').strace; \
+	done
+
+$(STRACE_ANALYSES_DIR):
+	@mkdir -p $@
+
+%.strace.jsonl: %.strace
+	@echo "Converting $<..."
+	@cat $< | python3 $(PROJ_DIR)/scripts/strace-json.py > $@

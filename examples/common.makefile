@@ -2,6 +2,9 @@ EMPTY :=
 SPACE := $(EMPTY) $(EMPTY)
 SEP := ,
 
+PROJ_DIR := $(shell git rev-parse --show-toplevel)
+NPROC := $(shell nproc)
+
 SCALE ?= 1
 REMOTES ?=
 SSH_PORT ?= 2222
@@ -27,12 +30,12 @@ ICECCD := iceccd -d -m 0 -s $(ICECC_SCHED) && sleep 5
 .PHONY: all
 all: build
 
-build: local-build
+build: concc-build
 
 # Project and worker containers will be kept running for debugging.
-.PHONY: local-build
-local-build: JOBS ?= $$(concc-worker-pool limit)
-local-build: buildenv secrets workspace
+.PHONY: concc-build
+concc-build: JOBS ?= $$(concc-worker-pool limit)
+concc-build: buildenv secrets workspace
 	$(MAKE) src-clean
 	$(MAKE) local-clean
 	docker compose up -d --scale worker=$(SCALE) worker project
@@ -57,7 +60,7 @@ remote-build: buildenv secrets workspace
 	  client concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
 .PHONY: nondist-build
-nondist-build: JOBS ?= $(shell nproc)
+nondist-build: JOBS ?= $(NPROC)
 nondist-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(NONDIST_CONFIGURE_CMD)'
