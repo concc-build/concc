@@ -6,6 +6,7 @@ services:
     init: true
     volumes:
       - ./workspace:/workspace
+      - /tmp/strace:/strace
     secrets:
       - password
     # We cannot define CC as an environment variable so that `configure` works
@@ -20,6 +21,8 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/fuse:/dev/fuse
+    volumes:
+      - /tmp/strace:/strace
 
   project:
     image: atmoz/sftp

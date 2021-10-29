@@ -24,11 +24,11 @@ workspace:
 	git clone --depth=1 $(REPO) workspace/src
 
 STRACE_TARGET ?=
-STRACE_DIR := workspace/strace
+STRACE_DIR := strace
 STRACE_OPTIONS := -ff -ttt -T -v -xx -X raw -y
 STRACE_OUTDIR := $(STRACE_DIR)/$(STRACE_TARGET).$(JOBS)
 STRACE_JSONL_FILES := $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
-STRACE_ARCHIVE := workspace/strace.tar.xz
+STRACE_ARCHIVE := strace.tar.xz
 
 .PHONY: strace
 strace: $(STRACE_OUTDIR)
@@ -44,20 +44,48 @@ strace-clean:
 	@rm -rf $(STRACE_DIR) $(STRACE_ARCHIVE)
 
 $(STRACE_ARCHIVE):
-	@$(MAKE) strace STRACE_TARGET=concc JOBS=1
-	@$(MAKE) strace STRACE_TARGET=concc JOBS=4
-	@$(MAKE) strace STRACE_TARGET=nondist JOBS=1
-	@$(MAKE) strace STRACE_TARGET=nondist JOBS=4
-	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=concc JOBS=1
-	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=concc JOBS=4
-	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=nondist JOBS=1
-	@$(MAKE) strace-jsonl -j $(nproc) STRACE_TARGET=nondist JOBS=4
-	@tar -C workspace -cJvf $@ strace
+	@if [ $$(echo '$(REMOTES)' | wc -w) -gt 1 ]; \
+	then \
+	  echo 'ERROR: specify at most single remote server in REMOTES'; \
+	  false; \
+	fi
+	@for N in $$(seq $(NPROC)); \
+	do \
+	  $(MAKE) strace STRACE_TARGET=local JOBS=$$N; \
+	  $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=local JOBS=$$N; \
+	  $(MAKE) strace STRACE_TARGET=nondist JOBS=$$N; \
+	  $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=nondist JOBS=$$N; \
+	  if [ -n '$(REMOTES)' ]; \
+	  then \
+	    $(MAKE) strace STRACE_TARGET=remote REMOTES=$(REMOTES) JOBS=$$N; \
+	    $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=remote JOBS=$$N; \
+	  fi \
+	done
+	@tar -I 'xz -9 -T0' -cvf $@ strace
 
 $(STRACE_OUTDIR):
-	@mkdir -p $@
-	@$(MAKE) $(STRACE_TARGET)-build JOBS=$(JOBS) \
-	  GCC='strace $(STRACE_OPTIONS) -o /$@/strace gcc'
+	@mkdir -p $(STRACE_DIR)
+	@if [ '$(STRACE_TARGET)' != remote ]; \
+	then \
+	  mkdir -p /tmp/$@; \
+	fi
+	@if [ '$(STRACE_TARGET)' = remote ]; \
+	then \
+	  ssh $(REMOTES) mkdir -p /tmp/$@; \
+	fi
+	@$(MAKE) $(STRACE_TARGET)-build REMOTES=$(REMOTES) JOBS=$(JOBS) \
+	  GCC='strace $(STRACE_OPTIONS) -o /$@/strace gcc' \
+	  DOCKER_OPTIONS='-v /tmp/$(STRACE_DIR):/strace'
+	@if [ '$(STRACE_TARGET)' != remote ]; \
+	then \
+	  cp -R /tmp/$@ $@; \
+	  sudo rm -rf /tmp/$@; \
+	fi
+	@if [ '$(STRACE_TARGET)' = remote ]; \
+	then \
+	  scp -r $(REMOTES):/tmp/$@ $@; \
+	  docker -H ssh://$(REMOTES) exec $(REMOTE_CONTAINER) rm -rf /$@; \
+	fi
 	@for strace in $$(/bin/ls -1 $@/strace.*); \
 	do \
 	  mv $$strace $@/$$(echo $$strace | sed 's/.*\.//').strace; \

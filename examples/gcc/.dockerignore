@@ -1,4 +1,6 @@
 .gitignore
 /password
+/strace.tar.xz
 /users.conf
+/strace/
 /workspace/
