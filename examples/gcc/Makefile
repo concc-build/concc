@@ -29,6 +29,8 @@ STRACE_OPTIONS := -ff -ttt -T -v -xx -X raw -y
 STRACE_OUTDIR := $(STRACE_DIR)/$(STRACE_TARGET).$(JOBS)
 STRACE_JSONL_FILES := $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
 STRACE_ARCHIVE := strace.tar.xz
+STRACE_JOBTREE_JSON := strace.jobtree.json
+STRACE_HTML := strace.html
 
 .PHONY: strace
 strace: $(STRACE_OUTDIR)
@@ -39,9 +41,12 @@ strace-jsonl: $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
 .PHONY: strace-archive
 strace-archive: $(STRACE_ARCHIVE)
 
+.PHONY: strace-html
+strace-html: $(STRACE_HTML)
+
 .PHONY: strace-clean
 strace-clean:
-	@rm -rf $(STRACE_DIR) $(STRACE_ARCHIVE)
+	@rm -rf $(STRACE_DIR) $(STRACE_ARCHIVE) $(STRACE_JOBTREE_JSON) $(STRACE_HTML)
 
 $(STRACE_ARCHIVE):
 	@if [ $$(echo '$(REMOTES)' | wc -w) -gt 1 ]; \
@@ -90,6 +95,12 @@ $(STRACE_OUTDIR):
 	do \
 	  mv $$strace $@/$$(echo $$strace | sed 's/.*\.//').strace; \
 	done
+
+$(STRACE_HTML): $(STRACE_JOBTREE_JSON)
+	@cat $< | python3 $(PROJ_DIR)/scripts/strace-html.py >$@
+
+$(STRACE_JOBTREE_JSON):
+	@python3 $(PROJ_DIR)/scripts/strace-jobtree.py $(STRACE_DIR) >$@
 
 $(STRACE_ANALYSES_DIR):
 	@mkdir -p $@
