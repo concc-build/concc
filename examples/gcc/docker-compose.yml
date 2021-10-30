@@ -6,6 +6,7 @@ services:
     init: true
     volumes:
       - ./workspace:/workspace
+      - ./scripts:/opt/concc/scripts
       - /tmp/strace:/strace
     secrets:
       - password

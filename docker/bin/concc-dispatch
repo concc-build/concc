@@ -5,6 +5,14 @@ then
   set -ex
 fi
 
+if [ -x /opt/concc/scripts/run-locally ]
+then
+  if /opt/concc/scripts/run-locally "$@"
+  then
+    exec "$@"  # run locally
+  fi
+fi
+
 SLEEP=${CONCC_DEFAULT_SLEEP:-5}
 WORKER=
 
