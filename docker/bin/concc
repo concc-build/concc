@@ -135,7 +135,7 @@ else
   SSHFS_RUN_MODE='-f'
 fi
 cat <<EOF >/tmp/mount.sh
-sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT \
+/opt/concc/bin/sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT \
   -o ssh_command='sshpass -f /tmp/password ssh' \
   -o idmap=user \
   -o cache=yes \
