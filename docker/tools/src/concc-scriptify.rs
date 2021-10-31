@@ -23,6 +23,9 @@ fn main() -> io::Result<()> {
         script.push("set -x".to_string());
     }
 
+    script.push(r#"SCRIPT_FILE="$0""#.to_string());
+    script.push(r#"trap "rm $SCRIPT_FILE" EXIT INT TERM"#.to_string());
+
     script.push(format!("cd {}", env::current_dir()?.to_str().unwrap()));
 
     for (k, v) in env::vars() {

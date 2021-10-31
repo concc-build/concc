@@ -37,4 +37,7 @@ done
 
 WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
 WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
-concc-scriptify "$@" | ssh -p $WORKER_PORT root@$WORKER_HOST sh -s
+# TODO: Using the workspace directory shared via SSHFS may be faster than the code below.
+SCRIPT_FILE=$(ssh -p $WORKER_PORT root@$WORKER_HOST mktemp)
+concc-scriptify "$@" | ssh -p $WORKER_PORT root@$WORKER_HOST "cat >$SCRIPT_FILE"
+ssh -p $WORKER_PORT root@$WORKER_HOST sh $SCRIPT_FILE
