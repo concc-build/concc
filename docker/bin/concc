@@ -128,7 +128,7 @@ fi
 vlog 1 "Initializing the worker pool..."
 gosu concc concc-worker-pool reset
 
-if [ "$CONCC_SSHFS_DEBUG" = 1 ]
+if [ "$CONCC_DEBUG_SSHFS" = 1 ]
 then
   SSHFS_RUN_MODE='-d'
 else

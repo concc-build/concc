@@ -4,11 +4,14 @@ use shell_words;
 
 const EXCLUDED_ENVS: &'static [&'static str] = &[
     "_",
-    "HOSTNAME",
-    "LC_CTYPE",
     "CONCC_DEBUG_DISPATCH",
     "CONCC_DEBUG_SCRIPTIFY",
+    "CONCC_DEBUG_SSHFS",
+    "CONCC_DIR",
     "CONCC_RUN_LOCALLY",
+    "HOSTNAME",
+    "OLDPWD",
+    "PWD",
 ];
 
 fn main() -> io::Result<()> {
