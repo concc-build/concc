@@ -7,7 +7,7 @@ RUN strip target/release/concc-worker-pool
 
 FROM debian AS sshfs-build
 WORKDIR /build
-COPY ./build-sshfs.sh .
+COPY ./build-sshfs.sh ./sshfs/* .
 RUN sh -eux ./build-sshfs.sh
 
 FROM scratch

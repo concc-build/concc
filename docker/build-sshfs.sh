@@ -6,6 +6,8 @@ apt-get install -y --no-install-recommends \
   libfuse3-dev libglib2.0-dev
 
 git clone --depth=1 https://github.com/libfuse/sshfs.git /sshfs-src
+mv cache2.* /sshfs-src/
+(cd /sshfs-src; git apply cache2.patch)
 meson --buildtype=release /sshfs-src
 ninja
 strip ./sshfs
