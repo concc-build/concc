@@ -9,6 +9,8 @@ services:
       - ./scripts:/opt/concc/scripts
     secrets:
       - password
+    logging:
+      driver: none
 
   worker:
     image: chromium-buildenv

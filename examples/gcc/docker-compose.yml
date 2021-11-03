@@ -10,6 +10,8 @@ services:
       - /tmp/strace:/strace
     secrets:
       - password
+    logging:
+      driver: none
     # We cannot define CC as an environment variable so that `configure` works
     # properly.
 

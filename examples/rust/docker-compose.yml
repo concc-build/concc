@@ -8,6 +8,8 @@ services:
       - ./workspace:/workspace
     secrets:
       - password
+    logging:
+      driver: none
 
   worker:
     image: rust-buildenv
