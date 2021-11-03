@@ -50,10 +50,16 @@ local-build: buildenv secrets workspace
 remote-build: JOBS ?= $$(concc-worker-pool limit)
 remote-build: buildenv secrets workspace
 	$(MAKE) src-clean
-	$(MAKE) remote-clean
 	for REMOTE in $(REMOTES); \
 	do \
-	   docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; \
+	  docker -H ssh://$$REMOTE stop $(REMOTE_CONTAINER) || true; \
+	  LOCAL_IMAGE=$$(docker image ls -q $(BUILDENV)); \
+	  REMOTE_IMAGE=$$(docker -H ssh://$$REMOTE image ls -q $(BUILDENV)); \
+	  if [ "$$LOCAL_IMAGE" != "$$REMOTE_IMAGE" ]; \
+	  then \
+	    docker -H ssh://$$REMOTE image rm -f $(BUILDENV); \
+	    docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; \
+	  fi \
 	done
 	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
 	for REMOTE in $(REMOTES); \
