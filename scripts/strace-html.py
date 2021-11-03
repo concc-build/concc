@@ -57,7 +57,7 @@ print('''
             const syscall = summary.syscall.stats[syscall_name];
             if (syscall) {{
               const per_total = (100 * syscall.elapsed / summary.elapsed).toFixed(2);
-              if (per_total >= 10) {{
+              if (per_total >= 10 && !slow_syscalls.includes(syscall_name)) {{
                 slow_syscalls.push(syscall_name);
               }}
               const per_syscall = (100 * syscall.elapsed / summary.syscall.elapsed).toFixed(2);
