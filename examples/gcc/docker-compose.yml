@@ -22,8 +22,7 @@ services:
     init: true
     command: >-
       concc-worker
-    cap_add:
-      - SYS_ADMIN
+    privileged: true
     devices:
       - /dev/fuse:/dev/fuse
     volumes:
