@@ -6,6 +6,8 @@ services:
     init: true
     volumes:
       - ./workspace:/workspace
+    tmpfs:
+      - /tmp
     secrets:
       - password
     logging:
@@ -20,6 +22,8 @@ services:
       - SYS_ADMIN
     devices:
       - /dev/fuse:/dev/fuse
+    tmpfs:
+      - /tmp
 
   project:
     image: atmoz/sftp
@@ -30,6 +34,8 @@ services:
     volumes:
       - ./workspace:/home/concc/workspace
       - ./users.conf:/etc/sftp/users.conf:ro
+    tmpfs:
+      - /tmp
 
 secrets:
   password:

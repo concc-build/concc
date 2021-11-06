@@ -6,6 +6,7 @@ PROGNAME=$(basename $0)
 BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
+NOENT_EXCLUDE=/workspace/.noent-exclude
 
 WORKDIR=$(pwd)
 PROJECT=$(hostname)
@@ -134,12 +135,16 @@ then
 else
   SSHFS_RUN_MODE='-f'
 fi
+SSHFS_OPTIONS="-o ssh_command='sshpass -f /tmp/password ssh'"
+SSHFS_OPTIONS="$SSHFS_OPTIONS -o idmap=user"
+SSHFS_OPTIONS="$SSHFS_OPTIONS -o cache=yes"
+SSHFS_OPTIONS="$SSHFS_OPTIONS -o kernel_cache"
+if [ -f $NOENT_EXCLUDE ]
+then
+  SSHFS_OPTIONS="$SSHFS_OPTIONS -o noent_exclude='$(cat $NOENT_EXCLUDE)'"
+fi
 cat <<EOF >/tmp/mount.sh
-/opt/concc/bin/sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT \
-  -o ssh_command='sshpass -f /tmp/password ssh' \
-  -o idmap=user \
-  -o cache=yes \
-  -o kernel_cache \
+/opt/concc/bin/sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT $SSHFS_OPTIONS \
   concc@$PROJECT_HOST:/workspace /workspace
 EOF
 
@@ -162,7 +167,7 @@ do
     /opt/concc/scripts/setup-worker $PROJECT $WORKER
   fi
 
-  LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST nproc)
+  LIMIT=$(ssh -p $WORKER_PORT $WORKER_HOST cat /tmp/.concc-max-jobs)
   vlog 1 "$WORKER: Maximum number of jobs: $LIMIT"
 
   vlog 1 "Add $WORKER to the worker pool..."

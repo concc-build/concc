@@ -3,8 +3,10 @@
 MOUNT_SH=/tmp/mount.sh
 PASSWORD=/tmp/password
 
-SSH_MAX_SESSIONS=${CONCC_MAX_JOBS:-$(nproc)}
-sed -i "s|#MaxSessions .*|MaxSessions $SSH_MAX_SESSIONS|" /etc/ssh/sshd_config
+MAX_JOBS=${CONCC_MAX_JOBS:-$(nproc)}
+echo $MAX_JOBS >/tmp/.concc-max-jobs
+
+sed -i "s|#MaxSessions .*|MaxSessions $MAX_JOBS|" /etc/ssh/sshd_config
 /etc/init.d/ssh start
 
 while true

@@ -69,11 +69,7 @@ $(STRACE_ARCHIVE):
 	@tar -I 'xz -9 -T0' -cvf $@ strace
 
 $(STRACE_OUTDIR):
-	@mkdir -p $(STRACE_DIR)
-	@if [ '$(STRACE_TARGET)' != remote ]; \
-	then \
-	  mkdir -p /tmp/$@; \
-	fi
+	@mkdir -p $@ /tmp/$@
 	@if [ '$(STRACE_TARGET)' = remote ]; \
 	then \
 	  ssh $(REMOTES) mkdir -p /tmp/$@; \
@@ -81,14 +77,11 @@ $(STRACE_OUTDIR):
 	@$(MAKE) $(STRACE_TARGET)-build REMOTES=$(REMOTES) JOBS=$(JOBS) \
 	  GCC='strace $(STRACE_OPTIONS) -o /$@/strace gcc' \
 	  DOCKER_OPTIONS='-v /tmp/$(STRACE_DIR):/strace'
-	@if [ '$(STRACE_TARGET)' != remote ]; \
-	then \
-	  cp -R /tmp/$@ $@; \
-	  sudo rm -rf /tmp/$@; \
-	fi
+	@cp /tmp/$@/* $@/
+	@sudo rm -rf /tmp/$@
 	@if [ '$(STRACE_TARGET)' = remote ]; \
 	then \
-	  scp -r $(REMOTES):/tmp/$@ $@; \
+	  scp -r $(REMOTES):/tmp/$@/* $@/; \
 	  docker -H ssh://$(REMOTES) exec $(REMOTE_CONTAINER) rm -rf /$@; \
 	fi
 	@for strace in $$(/bin/ls -1 $@/strace.*); \

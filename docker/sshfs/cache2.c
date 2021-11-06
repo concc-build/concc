@@ -11,6 +11,8 @@ struct cache2 {
   GHashTable *noent_paths;
   pthread_mutex_t lock;
   int debug;
+  char *noent_exclude;
+  GPtrArray *noent_exclude_globs;
 };
 
 static struct cache2 cache2;
@@ -24,6 +26,7 @@ static const struct fuse_opt cache2_opts[] = {
 
   CACHE2_OPT("debug", debug, 1),
   CACHE2_OPT("-d", debug, 1),
+  CACHE2_OPT("noent_exclude=%s", noent_exclude, 0),
 
   FUSE_OPT_END
 };
@@ -53,6 +56,22 @@ static gboolean cache2_is_noent(const char *path) {
   }
   pthread_mutex_unlock(&cache2.lock);
   return found;
+}
+
+static gboolean cache2_check_noent_globs(const char *path) {
+  int i;
+  if (cache2.noent_exclude_globs == NULL ||
+      cache2.noent_exclude_globs->len == 0) {
+    return TRUE;
+  }
+  for (i = 0; i < cache2.noent_exclude_globs->len; ++i) {
+    GPatternSpec *pspec =
+        (GPatternSpec *)g_ptr_array_index(cache2.noent_exclude_globs, i);
+    if (g_pattern_match_string(pspec, path)) {
+      return FALSE;
+    }
+  }
+  return TRUE;
 }
 
 static void cache2_add_noent(const char *path) {
@@ -117,7 +136,7 @@ static int cache2_getattr(
     return -ENOENT;
   }
   int err = cache2.next_oper->getattr(path, stbuf, fi);
-  if (err == -ENOENT) {
+  if (err == -ENOENT && cache2_check_noent_globs(path)) {
     DEBUG("%s: ADD\n", path);
     cache2_add_noent(path);
   }
@@ -269,6 +288,19 @@ struct fuse_operations *cache2_wrap(struct fuse_operations *oper) {
 }
 
 int cache2_parse_options(struct fuse_args *args) {
+  int res;
   cache2.debug = 0;
-  return fuse_opt_parse(args, &cache2, cache2_opts, NULL);
+  cache2.noent_exclude = NULL;
+  cache2.noent_exclude_globs = NULL;
+  res = fuse_opt_parse(args, &cache2, cache2_opts, NULL);
+  if (res != -1 && cache2.noent_exclude != NULL) {
+    int i;
+    char **patterns = g_strsplit(cache2.noent_exclude, ",", 0);
+    cache2.noent_exclude_globs = g_ptr_array_new();
+    for (i = 0; patterns[i] != NULL; ++i) {
+      g_ptr_array_add(cache2.noent_exclude_globs,
+                      g_pattern_spec_new(patterns[i]));
+    }
+  }
+  return res;
 }

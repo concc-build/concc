@@ -65,7 +65,8 @@ remote-build: buildenv secrets workspace
 	for REMOTE in $(REMOTES); \
 	do \
 	  docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d \
-	    --device /dev/fuse --privileged -p $(SSH_PORT):22/tcp $(DOCKER_OPTIONS) \
+	    --device /dev/fuse --tmpfs /run --tmpfs /tmp -p $(SSH_PORT):22/tcp \
+	    --privileged $(DOCKER_OPTIONS) \
 	    $(BUILDENV) concc-worker; \
 	done
 	docker compose up -d project
