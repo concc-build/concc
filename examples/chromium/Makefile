@@ -2,7 +2,7 @@ include ../common.makefile
 
 TARGETS ?= chrome
 
-CHROMIUM := 94.0.4606.54
+CHROMIUM := 97.0.4692.4
 GN_ARGS := "clang_base_path=\"/opt/clang\" compiler_timing=true cc_wrapper=\"concc-dispatch\""
 NONDIST_GN_ARGS := "clang_base_path=\"/opt/clang\" compiler_timing=true"
 ICECC_GN_ARGS := "clang_base_path=\"/opt/clang\" cc_wrapper=\"icecc\""
