@@ -21,7 +21,7 @@ curl -fsSL $INSTALL_BUILD_DEPS_SH | base64 -d | sed -e 's|sudo||g' | \
   bash -es -- --no-chromeos-fonts --no-prompt
 
 mkdir -p /opt/clang
-curl -fsSL $CLANG_UPDATE_PY | base64 -d | python - --output-dir=/opt/clang
+curl -fsSL $CLANG_UPDATE_PY | base64 -d | python3 - --output-dir=/opt/clang
 
 # cleanup
 apt-get clean
