@@ -21,6 +21,6 @@ SRC_CLEAN_CMD := rm -rf workspace/src/out
 
 workspace: | buildenv secrets
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
-	echo '/src/out/Default/gen/*' >workspace/.noent-exclude
+	echo '/src/out/Default/gen/*' >workspace/.nocache-globs
 	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker compose run --rm client concc -l gclient sync --force

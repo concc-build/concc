@@ -6,7 +6,7 @@ PROGNAME=$(basename $0)
 BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
-NOENT_EXCLUDE=/workspace/.noent-exclude
+NOCACHE_GLOBS=/workspace/.nocache-globs
 
 WORKDIR=$(pwd)
 PROJECT=$(hostname)
@@ -139,9 +139,10 @@ SSHFS_OPTIONS="-o ssh_command='sshpass -f /tmp/password ssh'"
 SSHFS_OPTIONS="$SSHFS_OPTIONS -o idmap=user"
 SSHFS_OPTIONS="$SSHFS_OPTIONS -o cache=yes"
 SSHFS_OPTIONS="$SSHFS_OPTIONS -o kernel_cache"
-if [ -f $NOENT_EXCLUDE ]
+SSHFS_OPTIONS="$SSHFS_OPTIONS -o noatime"
+if [ -f $NOCACHE_GLOBS ]
 then
-  SSHFS_OPTIONS="$SSHFS_OPTIONS -o noent_exclude='$(cat $NOENT_EXCLUDE)'"
+  SSHFS_OPTIONS="$SSHFS_OPTIONS -o nocache_globs='$(cat $NOCACHE_GLOBS)'"
 fi
 cat <<EOF >/tmp/mount.sh
 /opt/concc/bin/sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT $SSHFS_OPTIONS \
