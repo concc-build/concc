@@ -38,6 +38,23 @@ strace: $(STRACE_OUTDIR)
 .PHONY: strace-jsonl
 strace-jsonl: $(addsuffix .jsonl,$(wildcard $(STRACE_OUTDIR)/*.strace))
 
+.PHONY: strace-all
+strace-all:
+	@if [ $$(echo '$(REMOTES)' | wc -w) -gt 1 ]; \
+	then \
+	  echo 'ERROR: specify at most single remote server in REMOTES'; \
+	  false; \
+	fi
+	@$(MAKE) strace STRACE_TARGET=local JOBS=$(JOBS)
+	@$(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=local JOBS=$(JOBS)
+	@$(MAKE) strace STRACE_TARGET=nondist JOBS=$(JOBS)
+	@$(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=nondist JOBS=$(JOBS)
+	@if [ -n '$(REMOTES)' ]; \
+	then \
+	  $(MAKE) strace STRACE_TARGET=remote REMOTES=$(REMOTES) JOBS=$(JOBS); \
+	  $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=remote JOBS=$(JOBS); \
+	fi
+
 .PHONY: strace-archive
 strace-archive: $(STRACE_ARCHIVE)
 
@@ -49,23 +66,6 @@ strace-clean:
 	@rm -rf $(STRACE_DIR) $(STRACE_ARCHIVE) $(STRACE_JOBTREE_JSON) $(STRACE_HTML)
 
 $(STRACE_ARCHIVE):
-	@if [ $$(echo '$(REMOTES)' | wc -w) -gt 1 ]; \
-	then \
-	  echo 'ERROR: specify at most single remote server in REMOTES'; \
-	  false; \
-	fi
-	@for N in $$(seq $(NPROC)); \
-	do \
-	  $(MAKE) strace STRACE_TARGET=local JOBS=$$N; \
-	  $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=local JOBS=$$N; \
-	  $(MAKE) strace STRACE_TARGET=nondist JOBS=$$N; \
-	  $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=nondist JOBS=$$N; \
-	  if [ -n '$(REMOTES)' ]; \
-	  then \
-	    $(MAKE) strace STRACE_TARGET=remote REMOTES=$(REMOTES) JOBS=$$N; \
-	    $(MAKE) strace-jsonl -j $(NPROC) STRACE_TARGET=remote JOBS=$$N; \
-	  fi \
-	done
 	@tar -I 'xz -9 -T0' -cvf $@ strace
 
 $(STRACE_OUTDIR):
