@@ -50,14 +50,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "concc-tools"
+name = "concc-scriptify"
+version = "0.1.0"
+dependencies = [
+ "shell-words",
+]
+
+[[package]]
+name = "concc-worker-pool"
 version = "0.1.0"
 dependencies = [
  "anyhow",
  "fs2",
  "serde",
  "serde_json",
- "shell-words",
  "structopt",
 ]
 
