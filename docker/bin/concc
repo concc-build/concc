@@ -129,24 +129,37 @@ fi
 vlog 1 "Initializing the worker pool..."
 gosu concc concc-worker-pool reset
 
+cat <<EOF >/tmp/mount.sh
 if [ "$CONCC_DEBUG_SSHFS" = 1 ]
 then
-  SSHFS_RUN_MODE='-d'
-else
-  SSHFS_RUN_MODE='-f'
+  export RUST_LOG=debug
 fi
-SSHFS_OPTIONS="-o ssh_command='sshpass -f /tmp/password ssh'"
-SSHFS_OPTIONS="$SSHFS_OPTIONS -o idmap=user"
-SSHFS_OPTIONS="$SSHFS_OPTIONS -o cache=yes"
-SSHFS_OPTIONS="$SSHFS_OPTIONS -o kernel_cache"
-SSHFS_OPTIONS="$SSHFS_OPTIONS -o noatime"
-if [ -f $NOCACHE_GLOBS ]
-then
-  SSHFS_OPTIONS="$SSHFS_OPTIONS -o nocache_globs='$(cat $NOCACHE_GLOBS)'"
-fi
-cat <<EOF >/tmp/mount.sh
-/opt/concc/bin/sshfs $SSHFS_RUN_MODE -p $PROJECT_PORT $SSHFS_OPTIONS \
-  concc@$PROJECT_HOST:/workspace /workspace
+/opt/concc/bin/sshfs /workspace
+EOF
+cat <<EOF >/tmp/netfs.yml
+fuse:
+  mount-options:
+    - fsname=netfs
+    - default_permissions
+    - nonempty  # needed for mounting on this folder which contains this file
+  fusermount: /bin/fusermount
+  time-gran: 1000000000
+
+cache:
+  attr:
+    timeout: 1h
+  entry:
+    timeout: 1h
+  negative:
+    timeout: 1h
+
+remote:
+  sftp:
+    user: concc
+    host: $PROJECT_HOST
+    port: $PROJECT_PORT
+    path: /workspace
+    ssh-command: sshpass -f /tmp/password ssh
 EOF
 
 for WORKER in $(echo "$WORKERS" | tr ',' ' ')
@@ -175,10 +188,11 @@ do
   gosu concc concc-worker-pool add $WORKER $LIMIT
 
   vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
-  scp -P $WORKER_PORT /tmp/mount.sh $WORKER_HOST:/tmp/mount.sh
-  scp -P $WORKER_PORT /run/secrets/password $WORKER_HOST:/tmp/.password
-  ssh -p $WORKER_PORT $WORKER_HOST mv /tmp/.password /tmp/password
-  while ! ssh -p $WORKER_PORT $WORKER_HOST test -f /tmp/ready
+  scp -P $WORKER_PORT /run/secrets/password $WORKER_HOST:/tmp/password
+  scp -P $WORKER_PORT /tmp/netfs.yml $WORKER_HOST:/workspace/netfs.yml
+  scp -P $WORKER_PORT /tmp/mount.sh $WORKER_HOST:/tmp/.mount.sh
+  ssh -p $WORKER_PORT $WORKER_HOST mv /tmp/.mount.sh /tmp/mount.sh
+  while ssh -p $WORKER_PORT $WORKER_HOST test -f /workspace/netfs.yml
   do
     sleep 1
   done
