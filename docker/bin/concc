@@ -6,7 +6,7 @@ PROGNAME=$(basename $0)
 BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
-NOCACHE_GLOBS=/workspace/.nocache-globs
+NETFS_CACHE_YML="/workspace/.netfs.cache.yml"
 
 WORKDIR=$(pwd)
 PROJECT=$(hostname)
@@ -130,29 +130,26 @@ vlog 1 "Initializing the worker pool..."
 gosu concc concc-worker-pool reset
 
 cat <<EOF >/tmp/mount.sh
-if [ "$CONCC_DEBUG_SSHFS" = 1 ]
+if [ "\$CONCC_DEBUG_SSHFS" = 1 ]
 then
-  export RUST_LOG=debug
+  export RUST_LOG=trace
 fi
 /opt/concc/bin/sshfs /workspace
 EOF
+
 cat <<EOF >/tmp/netfs.yml
 fuse:
   mount-options:
     - fsname=netfs
     - default_permissions
-    - nonempty  # needed for mounting on this folder which contains this file
-  fusermount: /bin/fusermount
+  fusermount: $(which fusermount)
   time-gran: 1000000000
-
-cache:
-  attr:
-    timeout: 1h
-  entry:
-    timeout: 1h
-  negative:
-    timeout: 1h
-
+uid-map:
+  - local: 0
+    remote: $CONCC_UID
+gid-map:
+  - local: 0
+    remote: $CONCC_GID
 remote:
   sftp:
     user: concc
@@ -161,6 +158,20 @@ remote:
     path: /workspace
     ssh-command: sshpass -f /tmp/password ssh
 EOF
+if [ -f "$NETFS_CACHE_YML" ]
+then
+  cat "$NETFS_CACHE_YML" >>/tmp/netfs.yml
+else
+  cat <<EOF >>/tmp/netfs.yml
+cache:
+  attr:
+    timeout: 1d
+  entry:
+    timeout: 1d
+  negative:
+    timeout: 1d
+EOF
+  fi
 
 for WORKER in $(echo "$WORKERS" | tr ',' ' ')
 do
@@ -192,7 +203,7 @@ do
   scp -P $WORKER_PORT /tmp/netfs.yml $WORKER_HOST:/workspace/netfs.yml
   scp -P $WORKER_PORT /tmp/mount.sh $WORKER_HOST:/tmp/.mount.sh
   ssh -p $WORKER_PORT $WORKER_HOST mv /tmp/.mount.sh /tmp/mount.sh
-  while ssh -p $WORKER_PORT $WORKER_HOST test -f /workspace/netfs.yml
+  while ! ssh -p $WORKER_PORT $WORKER_HOST test -d /workspace/.netfs.d
   do
     sleep 1
   done

@@ -9,7 +9,7 @@ if [ -x /opt/concc/scripts/run-locally ]
 then
   if /opt/concc/scripts/run-locally "$@"
   then
-    exec "$@"  # run locally
+    sh -c "$@"  # run locally
   fi
 fi
 

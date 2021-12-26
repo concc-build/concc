@@ -1,0 +1,29 @@
+#!/bin/sh
+
+RUN_LOCALLY=0
+DO_DISPATCH=1
+
+case "$1" in
+  */python3)
+    case "$2" in
+      */gcc_link_wrapper.py)
+        exit $RUN_LOCALLY
+        ;;
+      */gcc_solink_wrapper.py)
+        exit $RUN_LOCALLY
+        ;;
+      */third_party/perfetto/tools/touch_file.py)
+        exit $RUN_LOCALLY
+        ;;
+      *)
+        break
+        ;;
+    esac
+    ;;
+  *)
+    break
+    ;;
+esac
+
+CMD="$@"
+exit $DO_DISPATCH

@@ -2,7 +2,7 @@ include ../common.makefile
 
 TARGETS ?= chrome
 
-CHROMIUM := 97.0.4692.4
+CHROMIUM := 96.0.4664.110
 GN_ARGS := "clang_base_path=\"/opt/clang\" compiler_timing=true cc_wrapper=\"concc-dispatch\""
 NONDIST_GN_ARGS := "clang_base_path=\"/opt/clang\" compiler_timing=true"
 ICECC_GN_ARGS := "clang_base_path=\"/opt/clang\" cc_wrapper=\"icecc\""
@@ -21,6 +21,6 @@ SRC_CLEAN_CMD := rm -rf workspace/src/out
 
 workspace: | buildenv secrets
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
-	echo '/src/out/Default/gen/*' >workspace/.nocache-globs
+	cp -f netfs.cache.yml workspace/.netfs.cache.yml
 	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker compose run --rm client concc -l gclient sync --force
