@@ -91,7 +91,7 @@ icecc-build: buildenv secrets workspace
 	make src-clean
 	docker compose run --rm client concc -C src -l '$(ICECC_CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
-	docker compose run --rm -e ICECC_REMOTE_CPP=1 client \
+	docker compose run --rm client \
 	  concc -C src -l '$(ICECCD) && $(TIME_ICECC) $(ICECC_BUILD_CMD)'
 
 # Project and worker containers will be kept running for debugging.
@@ -171,7 +171,7 @@ metrics-clean:
 
 .PHONY: buildenv
 buildenv: concc-tools
-	docker buildx build -t $(BUILDENV) .
+	docker buildx build -t $(BUILDENV) $(BUILDENV_BUILD_OPTIONS) .
 
 .PHONY: concc-tools
 concc-tools:

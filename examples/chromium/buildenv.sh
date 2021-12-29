@@ -23,6 +23,9 @@ curl -fsSL $INSTALL_BUILD_DEPS_SH | base64 -d | sed -e 's|sudo||g' | \
 mkdir -p /opt/clang
 curl -fsSL $CLANG_UPDATE_PY | base64 -d | python3 - --output-dir=/opt/clang
 
+icecc-create-env --clang /opt/clang/bin/clang
+mv $(/bin/ls -1 *.tar.gz) /opt/clang.chromium.$CHROMIUM.tar.gz
+
 # cleanup
 apt-get clean
 rm -rf /var/lib/apt/lists/*

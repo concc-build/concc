@@ -3,7 +3,8 @@
 ## Build a buildenv image
 
 ```shell
-docker buildx build -t chromium-buildenv --build-arg='CHROMIUM=94.0.4606.54' .
+export CHROMIUM=96.0.4664.110
+docker buildx build -t chromium-buildenv --build-arg='CHROMIUM=$CHROMIUM' .
 ```
 
 ## Create a SFTP account
@@ -16,7 +17,7 @@ echo "concc:$(cat password):$(id -u):$(id -g):workspace" >users.conf
 ## Get the Chromium source code
 
 ```shell
-git clone --depth=1 --branch=94.0.4606.54 \
+git clone --depth=1 --branch=$CHROMIUM \
   https://chromium.googlesource.com/chromium/src.git workspace/src
 docker compose run --rm client concc -l \
   gclient config --unmanaged https://chromium.googlesource.com/chromium/src.git
@@ -46,7 +47,30 @@ Generate Ninja files:
 
 ```shell
 docker compose run --rm client concc -C src -l \
-  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\"" is_debug=false'
+```
+
+Create `.netfs.cache.yml`:
+
+```shell
+cat <<EOF >workspace/.netfs.cache.yml
+cache:
+  dentry-cache:
+    excludes:
+      - src/out/*
+  attr:
+    timeout: 1d
+    excludes:
+      - src/out/*
+  entry:
+    timeout: 1d
+    excludes:
+      - src/out/*
+  negative:
+    timeout: 1d
+    excludes:
+      - src/out/*
+EOF
 ```
 
 Then, build a target with worker containers:
@@ -92,7 +116,7 @@ docker compose run --rm client concc -C src -l \
   'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
 ```
 
-Then, build with the remote worker container:
+Create `.netfs.cache.yml`, and then build with the remote worker container:
 
 ```shell
 docker compose run --rm client \

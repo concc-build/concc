@@ -4,9 +4,9 @@
 
 ## About this project
 
-This is an experimental project to study the feasibility of a distributed build
-system using Docker containers.  A simple distributed build system is built for
-the proof of concept.
+This is an experimental project for studying the feasibility of a distributed
+build system using Docker containers.  A simple distributed build system is
+built for a proof of the concept.
 
 In this project, we also study necessary components which compose a distributed
 build system.
@@ -69,7 +69,7 @@ As described in the previous section, the basic idea is very simple:
 2. Create containers and mount the source tree of the target artifacts
 3. Distribute build jobs to the containers
 
-The component diagram is show below:
+The component diagram is shown below:
 
 ```text
                               Docker Registry
@@ -92,7 +92,7 @@ The component diagram is show below:
 ---+----------+---------------------------------+----------------------
    |          |               Remote Machine    |
    |          |                                 |
-   |          | Build command via SSH           |
+   |          | Run build commands via SSH      |
    |          V                                 |
    |       +------------------+                 |
    +------>| Worker Container |<----------------+
@@ -115,16 +115,80 @@ Each client container contains the following commands:
   * Manages available worker containers
   * Assigns a worker container in the pool for a build job
 
-## TODO
+## Performance comparison
 
-* A mechanism to launch worker containers on demand from a client container
-* Security Model
+The following table is a performance comparison using
+[examples/chromium](./examples/chromium).
+
+| BUILD SYSTEM   | #JOBS | TIME (REAL) | TIME (USER) | TIME (SYS) |
+|----------------|-------|-------------|-------------|------------|
+| concc          | 32    | 57m48.990s  | 0m8.009s    | 0m20.441s  |
+| concc          | 64    | 40m35.554s  | 0m11.120s   | 0m30.298s  |
+| Icecream/1.3.1 | 32    | 63m31.931s  | 0m6.183s    | 0m15.850s  |
+| Icecream/1.3.1 | 64    | 65m4.077s   | 0m6.610s    | 0m15.124s  |
+
+Build environment:
+
+* Local Machine
+  * VirtualBox 6.1 (4x vCPU, 16 GB RAM) on MacBook Pro (macOS 12.1)
+    * Host IO cache is enabled
+  * OS: Arch Linux (linux-lts)
+  * CPU: 2.3 GHz Quad-Core Intel Core i7
+  * RAM: 32 GB 3733 HMz LPDDR4X
+  * SSD: 1 TB
+* 2x Remote Machines
+  * OS: Debian 11
+  * CPU: Ryzen 9 3950X
+  * RAM: 32 GB DDR4
+  * SSD: 512 GB
+  * RTT: min/avg/max/mdev = 0.720/1.395/2.274/0.497 ms
+
+Commands used for measurements:
+
+```shell
+# concc
+time make remote-build REMOTES='build1'         # 32 jobs
+time make remote-build REMOTES='build1 build2'  # 64 jobs
+
+# icecc
+time make icecc-build JOBS=32
+time make icecc-build JOBS=64
+```
+
+Icecream often consumed 90% or more of the CPU usage on the local machine.  On
+the other hand, concc consumed less then Icecream even when running 64 jobs.
+Probably, concc can perform more build jobs in parallel.
+
+Icecream may be faster than concc if it runs on a powerful machine.  As
+described in the previous section, one of causes of the slowdown is
+preprocessing `#include` directives with high degree of parallelism on the local
+machine.  Generally, it requires many computation resources.
+
+concc stably consumed CPU resources on remote machines.  The peak value of the
+CPU usage Icecream consumed was higher than concc, but its CPU usage is more
+fluctuational than concc.
+
+concc sometimes stopped due to IO errors which were probably caused by some bugs
+in the build system.
+
+## System Requirements
+
+* Linux with a FUSE module
+* Docker
 
 ## Dependencies
 
-* Docker
-* SSH
-* SSHFS
+* fusermount or fusermount3
+  * Neither libfuse2 or libfuse3 is required
+* OpenSSH
+* [masnagam/sshfs-rs]
+
+## TODO
+
+* A mechanism to launch worker containers on demand from a client container
+* Security model
+* Robustness
+* Monitoring tools
 
 ## License
 
@@ -134,4 +198,5 @@ Each client container contains the following commands:
 [distcc]: https://distcc.github.io/
 [Docker]: https://en.wikipedia.org/wiki/Docker_(software)
 [SSHFS]: https://github.com/libfuse/sshfs
+[masnagam/sshfs-rs]: https://github.com/masnagam/sshfs-rs
 [MIT]: ./LICENSE
