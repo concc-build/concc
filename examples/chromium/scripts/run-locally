@@ -2,9 +2,10 @@
 
 RUN_LOCALLY=0
 DO_DISPATCH=1
+CMD="$@"
 
 case "$1" in
-  */python3)
+  /usr/bin/python3)
     case "$2" in
       */gcc_link_wrapper.py)
         exit $RUN_LOCALLY
@@ -25,5 +26,4 @@ case "$1" in
     ;;
 esac
 
-CMD="$@"
 exit $DO_DISPATCH

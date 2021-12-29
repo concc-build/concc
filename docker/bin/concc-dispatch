@@ -9,7 +9,12 @@ if [ -x /opt/concc/scripts/run-locally ]
 then
   if /opt/concc/scripts/run-locally "$@"
   then
-    sh -c "$@"  # run locally
+    # This is a dirty hack...
+    #
+    # Some of programs may replace with concc-dispatch wrapper scripts in the
+    # setup-client script.  Set CONCC_RUN_LOCALLY 1 in order to invoke the
+    # original program and prevent infinite recursive calls.
+    exec env CONCC_RUN_LOCALLY=1 "$@"
   fi
 fi
 
