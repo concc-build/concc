@@ -73,7 +73,7 @@ remote-build: buildenv secrets workspace
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm -e CONCC_DEBUG_SSHFS=$(DEBUG_SSHFS) client \
-	  concc -C src -p $(shell hostname):$(SSH_PORT) -w $(REMOTE_WORKERS) \
+	  concc -C src -p $(shell uname -n):$(SSH_PORT) -w $(REMOTE_WORKERS) \
 	  '$(TIME_CLIENT) $(BUILD_CMD)'
 
 .PHONY: nondist-build
