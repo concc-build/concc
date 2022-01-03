@@ -117,8 +117,13 @@ Each client container contains the following commands:
 
 ## Performance comparison
 
-The following table is a performance comparison using
+The following tables are performance comparisons using
 [examples/chromium](./examples/chromium).
+
+You can also see screenshots of grafana dashboard for performance metrics in
+[this Google Drive folder](https://drive.google.com/drive/folders/1CYnSDMGbRKTBH4tQkYAGmocF_ZMimWib?usp=sharing).
+
+Laptop PC:
 
 | BUILD SYSTEM   | #JOBS | TIME (REAL) | TIME (USER) | TIME (SYS) |
 |----------------|-------|-------------|-------------|------------|
@@ -127,21 +132,36 @@ The following table is a performance comparison using
 | Icecream/1.3.1 | 32    | 63m31.931s  | 0m6.183s    | 0m15.850s  |
 | Icecream/1.3.1 | 64    | 65m4.077s   | 0m6.610s    | 0m15.124s  |
 
+Powerful PC:
+
+| BUILD SYSTEM   | #JOBS | TIME (REAL) | TIME (USER) | TIME (SYS) |
+|----------------|-------|-------------|-------------|------------|
+| concc          | 32    | 47m13.338s  | 0m5.344s    | 0m9.960s   |
+| concc          | 64    | 25m18.450s  | 0m6.006s    | 0m12.516s  |
+| Icecream/1.3.1 | 32    | 40m21.846s  | 0m6.339s    | 0m6.305s   |
+| Icecream/1.3.1 | 64    | 21m23.758s  | 0m6.480s    | 0m5.924s   |
+
 Build environment:
 
-* Local Machine
+* Local Machine (Laptop PC)
   * VirtualBox 6.1 (4x vCPU, 16 GB RAM) on MacBook Pro (macOS 12.1)
     * Host IO cache is enabled
   * OS: Arch Linux (linux-lts)
   * CPU: 2.3 GHz Quad-Core Intel Core i7
-  * RAM: 32 GB 3733 HMz LPDDR4X
+  * RAM: 32 GB (3733 HMz LPDDR4X)
   * SSD: 1 TB
+  * RTT: min/avg/max/mdev = 0.720/1.395/2.274/0.497 ms (between PC and remotes)
+* Local Machine (Powerful PC)
+  * OS: Arch Linux (linux)
+  * CPU: Ryzen 9 5950X
+  * RAM: 32 GB (DDR4-3200)
+  * SSD: 2 TB (PCIe Gen3 x4)
+  * RTT: min/avg/max/mdev = 0.099/0.166/0.333/0.061 ms (between PC and remotes)
 * 2x Remote Machines
   * OS: Debian 11
   * CPU: Ryzen 9 3950X
-  * RAM: 32 GB DDR4
+  * RAM: 32 GB (DDR4-2400)
   * SSD: 512 GB
-  * RTT: min/avg/max/mdev = 0.720/1.395/2.274/0.497 ms
 
 Commands used for measurements:
 
@@ -155,18 +175,24 @@ time make icecc-build JOBS=32
 time make icecc-build JOBS=64
 ```
 
-Icecream often consumed 90% or more of the CPU usage on the local machine.  On
-the other hand, concc consumed less then Icecream even when running 64 jobs.
-Probably, concc can perform more build jobs in parallel.
+Icecream often consumed 90% or more of the CPU usage on the laptop PC.  On the
+other hand, concc consumed less then Icecream on the laptop PC even when running
+64 jobs.  Probably, concc can perform more build jobs in parallel on the laptop
+PC.
 
-Icecream may be faster than concc if it runs on a powerful machine.  As
-described in the previous section, one of causes of the slowdown is
-preprocessing `#include` directives with high degree of parallelism on the local
-machine.  Generally, it requires many computation resources.
+Icecream was faster than concc on the powerful PC.  As described in the previous
+section, one of causes of the slowdown is preprocessing `#include` directives
+with high degree of parallelism on the local machine.  Generally, it requires
+many computational resources.
 
-concc stably consumed CPU resources on remote machines.  The peak value of the
-CPU usage Icecream consumed was higher than concc, but its CPU usage is more
-fluctuational than concc.
+concc stably consumed CPU resources on remote machines on the both case.  The
+peak value of the CPU usage Icecream consumed was higher than concc, but its CPU
+usage was more fluctuational than concc on the laptop PC.
+
+concc tended to consume less network bandwidth than Icecream.  Icecream consumed
+more than 300 Mbps on the local machine for sending data when running 64 jobs in
+parallel.  On the other hand, concc consumed 40 Mbps or less for that in the
+stationary phase.
 
 concc sometimes stopped due to IO errors which were probably caused by some bugs
 in the build system.
