@@ -22,6 +22,10 @@ SLEEP=${CONCC_DEFAULT_SLEEP:-5}
 WORKER=
 
 release() {
+  if [ -n "$SCRIPT_FILE" ]
+  then
+    /bin/rm -f $SCRIPT_FILE
+  fi
   if [ -n "$WORKER" ]
   then
     concc-worker-pool release $WORKER
@@ -42,7 +46,7 @@ done
 
 WORKER_HOST=$(echo $WORKER | cut -d ':' -f 1)
 WORKER_PORT=$(echo $WORKER | cut -d ':' -f 2)
-# TODO: Using the workspace directory shared via SSHFS may be faster than the code below.
-SCRIPT_FILE=$(ssh -p $WORKER_PORT root@$WORKER_HOST mktemp)
-concc-scriptify "$@" | ssh -p $WORKER_PORT root@$WORKER_HOST "cat >$SCRIPT_FILE"
+mkdir -p /workspace/.concc.d/tasks
+SCRIPT_FILE=$(mktemp -p /workspace/.concc.d/tasks task.XXX)
+concc-scriptify "$@" >$SCRIPT_FILE
 ssh -p $WORKER_PORT root@$WORKER_HOST sh $SCRIPT_FILE
