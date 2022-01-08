@@ -3,14 +3,11 @@ cache:
     excludes:
       - src/out/*
   attr:
-    timeout: 1d
     excludes:
       - src/out/*
   entry:
-    timeout: 1d
     excludes:
       - src/out/*
   negative:
-    timeout: 1d
     excludes:
       - src/out/*

@@ -28,6 +28,6 @@ SRC_CLEAN_CMD := rm -rf workspace/src/out
 
 workspace: | buildenv secrets
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
-	cp -f netfs.cache.yml workspace/.netfs.cache.yml
+	cp -f netfs.cache.yml workspace/
 	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
 	docker compose run --rm client concc -l gclient sync --force

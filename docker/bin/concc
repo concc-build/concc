@@ -6,7 +6,7 @@ PROGNAME=$(basename $0)
 BASEDIR=$(cd $(dirname $0); pwd)
 
 DEFAULT_SSH_PORT=22
-NETFS_CACHE_YML="/workspace/.netfs.cache.yml"
+NETFS_OVERRIDE_YML="/workspace/netfs.override.yml"
 
 WORKDIR=$(pwd)
 PROJECT=$(hostname)
@@ -150,6 +150,13 @@ uid-map:
 gid-map:
   - local: 0
     remote: $CONCC_GID
+cache:
+  attr:
+    timeout: 1d
+  entry:
+    timeout: 1d
+  negative:
+    timeout: 1d
 remote:
   sftp:
     user: concc
@@ -158,20 +165,13 @@ remote:
     path: /workspace
     ssh-command: sshpass -f /tmp/password ssh
 EOF
-if [ -f "$NETFS_CACHE_YML" ]
+if [ -f "$NETFS_OVERRIDE_YML" ]
 then
-  cat "$NETFS_CACHE_YML" >>/tmp/netfs.yml
-else
-  cat <<EOF >>/tmp/netfs.yml
-cache:
-  attr:
-    timeout: 1d
-  entry:
-    timeout: 1d
-  negative:
-    timeout: 1d
-EOF
-  fi
+  # Merge NETFS_OVERRIDE_YML into /tmp/netfs.yml.
+  # See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#merge-combine-all-documents-into-one
+  yq ea -i '. as $item ireduce ({}; . * $item )' /tmp/netfs.yml \
+    $NETFS_OVERRIDE_YML
+fi
 
 for WORKER in $(echo "$WORKERS" | tr ',' ' ')
 do
