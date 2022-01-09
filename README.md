@@ -205,7 +205,7 @@ in the build system.
 ## Dependencies
 
 * fusermount or fusermount3
-  * Neither libfuse2 or libfuse3 is required
+  * Neither libfuse2 nor libfuse3 is required
 * OpenSSH
 * [masnagam/sshfs-rs]
 
