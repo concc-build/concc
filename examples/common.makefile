@@ -61,12 +61,12 @@ remote-build: buildenv secrets workspace
 	    docker save $(BUILDENV) | docker -H ssh://$$REMOTE load; \
 	  fi \
 	done
-	# FIXME(masnagam/concc#1): replace --privileged with appropriate options
+	# FIXME(masnagam/concc#1): remove SYS_ADMIN
 	for REMOTE in $(REMOTES); \
 	do \
 	  docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d \
 	    --device /dev/fuse --tmpfs /run --tmpfs /tmp -p $(SSH_PORT):22/tcp \
-	    --privileged $(DOCKER_OPTIONS) \
+	    --cap-add SYS_ADMIN --security-opt apparmor:unconfined $(DOCKER_OPTIONS) \
 	    $(BUILDENV) concc-worker; \
 	done
 	docker compose up -d project
