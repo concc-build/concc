@@ -39,7 +39,7 @@ Then, build it with worker containers:
 docker compose run --rm client concc -C src \
   -p "$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
   -w "$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
-  'make -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
+  'make -j $(concc-worker-pool limit) CC="concc-exec gcc"'
 ```
 
 Using `docker stats`, you can confirm that build jobs will be distributed to the
@@ -79,5 +79,5 @@ Then, build with the remote worker container:
 ```shell
 docker compose run --rm client \
   concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
-  'make -j $(concc-worker-pool limit) CC="concc-dispatch gcc"'
+  'make -j $(concc-worker-pool limit) CC="concc-exec gcc"'
 ```

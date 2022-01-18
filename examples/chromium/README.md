@@ -47,7 +47,7 @@ Generate Ninja files:
 
 ```shell
 docker compose run --rm client concc -C src -l \
-  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\"" is_debug=false'
+  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-exec\"" is_debug=false'
 ```
 
 Create `.netfs.cache.yml`:
@@ -113,7 +113,7 @@ Generate Ninja files:
 
 ```shell
 docker compose run --rm client concc -C src -l \
-  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-dispatch\""'
+  'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-exec\""'
 ```
 
 Create `.netfs.cache.yml`, and then build with the remote worker container:

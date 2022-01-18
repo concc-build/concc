@@ -1,20 +1,20 @@
 #!/bin/sh
 
-RUN_LOCALLY=0
-DO_DISPATCH=1
+EXEC_LOCAL=0
+EXEC_REMOTE=1
 CMD="$@"
 
 case "$1" in
   /usr/bin/python3)
     case "$2" in
       */gcc_link_wrapper.py)
-        exit $RUN_LOCALLY
+        exit $EXEC_LOCAL
         ;;
       */gcc_solink_wrapper.py)
-        exit $RUN_LOCALLY
+        exit $EXEC_LOCAL
         ;;
       */third_party/perfetto/tools/touch_file.py)
-        exit $RUN_LOCALLY
+        exit $EXEC_LOCAL
         ;;
       *)
         break
@@ -26,4 +26,4 @@ case "$1" in
     ;;
 esac
 
-exit $DO_DISPATCH
+exit $EXEC_REMOTE

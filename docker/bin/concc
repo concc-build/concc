@@ -26,7 +26,7 @@ OPTIONS:
     Change to <dir> before doing anything else.
 
   -l, --local
-    Run jobs locally.
+    Execute jobs in the local container.
 
   -p, --project <client> [default: '$PROJECT']
     A colon-separated pair of the hostname and the port number of the project
@@ -40,7 +40,7 @@ OPTIONS:
 
 ARGUMENTS:
   <script>
-    A script to be executed by the concc user on the client container.
+    A script to be executed by the concc user in the client container.
 EOF
   exit 0
 }
@@ -72,7 +72,7 @@ do
       shift 2
       ;;
     '-l' | '--local')
-      export CONCC_RUN_LOCALLY=1
+      export CONCC_EXEC_LOCAL=1
       shift
       ;;
     '-p' | '--project')

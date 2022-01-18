@@ -36,8 +36,8 @@ LABEL_MAP = {
 def parse_command(value):
   parts = value[1:-1].split(' ')
   while True:
-    if parts[0].endswith('concc-dispatch'):
-      parts = parts[1:]  # removes the concc-dispatch command
+    if parts[0].endswith('concc-exec'):
+      parts = parts[1:]  # removes the concc-exec command
       continue
     if parts[0] == '/usr/bin/time':
       parts = parts[5:]  # removes `/usr/bin/time -v -a -o /path/to/file`

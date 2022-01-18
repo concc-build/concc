@@ -4,11 +4,6 @@ use shell_words;
 
 const EXCLUDED_ENVS: &'static [&'static str] = &[
     "_",
-    "CONCC_DEBUG_DISPATCH",
-    "CONCC_DEBUG_SCRIPTIFY",
-    "CONCC_DEBUG_SSHFS",
-    "CONCC_DIR",
-    "CONCC_RUN_LOCALLY",
     "HOSTNAME",
     "OLDPWD",
     "PWD",
@@ -32,6 +27,9 @@ fn main() -> io::Result<()> {
 
     for (k, v) in env::vars() {
         if EXCLUDED_ENVS.contains(&k.as_str()) {
+            continue;
+        }
+        if k.starts_with("CONCC_") {
             continue;
         }
         script.push(format!("export {}={}", k, shell_words::quote(&v)));

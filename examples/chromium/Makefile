@@ -7,7 +7,7 @@ CHROMIUM := 96.0.4664.110
 # concc builds successfully even when NaCl is enabled.
 # However, icecc fails building when enabling NaCl.
 COMMON_GN_ARGS := is_debug=false clang_base_path=\"/opt/clang\" enable_nacl=false
-GN_ARGS := "$(COMMON_GN_ARGS) cc_wrapper=\"concc-dispatch\""
+GN_ARGS := "$(COMMON_GN_ARGS) cc_wrapper=\"concc-exec\""
 NONDIST_GN_ARGS := "$(COMMON_GN_ARGS)"
 ICECC_GN_ARGS := "$(COMMON_GN_ARGS) cc_wrapper=\"icecc\" use_debug_fission=false"
 ICECC_VERSION := /opt/clang.chromium.$(CHROMIUM).tar.gz

@@ -1,20 +1,20 @@
 #!/bin/sh
 
-if [ "$CONCC_DEBUG_DISPATCH" = 1 ]
+if [ "$CONCC_DEBUG_EXEC" = 1 ]
 then
   set -ex
 fi
 
-if [ -x /opt/concc/scripts/run-locally ]
+if [ -x /opt/concc/scripts/exec-local ]
 then
-  if /opt/concc/scripts/run-locally "$@"
+  if /opt/concc/scripts/exec-local "$@"
   then
     # This is a dirty hack...
     #
-    # Some of programs may replace with concc-dispatch wrapper scripts in the
-    # setup-client script.  Set CONCC_RUN_LOCALLY 1 in order to invoke the
+    # Some of programs may replace with concc-exec wrapper scripts in the
+    # setup-client script.  Set CONCC_EXEC_LOCAL 1 in order to invoke the
     # original program and prevent infinite recursive calls.
-    exec env CONCC_RUN_LOCALLY=1 "$@"
+    exec env CONCC_EXEC_LOCAL=1 "$@"
   fi
 fi
 

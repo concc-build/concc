@@ -4,7 +4,7 @@ GCC ?= gcc
 
 # In this example, only CC commands will be distributed, any command can be
 # distributed theoretically.
-CONCC_CC = "$(TIME_CLIENT) concc-dispatch $(TIME_WORKER) $(GCC)"
+CONCC_CC = "$(TIME_CLIENT) concc-exec $(TIME_WORKER) $(GCC)"
 NONDIST_CC = "$(TIME_NONDIST) $(STRACE) $(GCC)"
 ICECC_CC = "$(TIME_ICECC) icecc $(GCC)"
 

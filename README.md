@@ -107,10 +107,10 @@ Each client container contains the following commands:
   * The entry point of a client container
 * [concc-worker](./docker/bin/concc-worker)
   * The entry point of a worker container
-* [concc-dispatch](./docker/bin/concc-dispatch)
-  * Distributes executions onto worker containers
+* [concc-exec](./docker/bin/concc-exec)
+  * Execute a command in a local or remote container
 * [concc-scriptify](./docker/bin/concc-scriptify)
-  * Makes a script from a command, which will be executed on a worker container
+  * Makes a script from a command, which will be executed in a container
 * [concc-worker-pool](./docker/bin/concc-worker-pool)
   * Manages available worker containers
   * Assigns a worker container in the pool for a build job

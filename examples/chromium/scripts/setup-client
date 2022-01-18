@@ -1,16 +1,16 @@
 #!/bin/sh
 
-if [ -z "$CONCC_RUN_LOCALLY" ]
+if [ -z "$CONCC_EXEC_LOCAL" ]
 then
   PYTHON3=$(which python3)
   mv $PYTHON3 ${PYTHON3}.local
   cat <<EOF >$PYTHON3
 #!/bin/sh
-if [ "\$CONCC_RUN_LOCALLY" = 1 ]
+if [ "\$CONCC_EXEC_LOCAL" = 1 ]
 then
   $PYTHON3.local "\$@"
 else
-  concc-dispatch $PYTHON3 "\$@"
+  concc-exec $PYTHON3 "\$@"
 fi
 EOF
   chmod +x $PYTHON3

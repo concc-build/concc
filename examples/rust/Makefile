@@ -1,6 +1,6 @@
 include ../common.makefile
 
-RUSTC_WRAPPER := concc-dispatch
+RUSTC_WRAPPER := concc-exec
 
 BUILDENV := rust-buildenv
 REMOTE_CONTAINER := rust-worker
