@@ -50,10 +50,10 @@ docker compose run --rm client concc -C src -l \
   'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-exec\"" is_debug=false'
 ```
 
-Create `.netfs.cache.yml`:
+Create `workspacefs.override.yaml`:
 
 ```shell
-cat <<EOF >workspace/.netfs.cache.yml
+cat <<EOF >workspace/workspacefs.override.yaml
 cache:
   dentry-cache:
     excludes:
@@ -116,7 +116,7 @@ docker compose run --rm client concc -C src -l \
   'gn gen out/Default --args="clang_base_path=\"/opt/clang\" cc_wrapper=\"concc-exec\""'
 ```
 
-Create `.netfs.cache.yml`, and then build with the remote worker container:
+Create `workspacefs.override.yaml`, and then build with the remote worker container:
 
 ```shell
 docker compose run --rm client \

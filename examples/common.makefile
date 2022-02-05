@@ -8,7 +8,7 @@ NPROC := $(shell nproc)
 SCALE ?= 1
 REMOTES ?=
 SSH_PORT ?= 2222
-DEBUG_SSHFS ?= 0
+DEBUG_WORKSPACEFS ?= 0
 ITERATIONS ?= 10
 DOCKER_OPTIONS ?=
 
@@ -42,7 +42,7 @@ local-build: buildenv secrets workspace
 	docker compose up -d --scale worker=$(SCALE) worker project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
-	docker compose run --rm -e CONCC_DEBUG_SSHFS=$(DEBUG_SSHFS) client \
+	docker compose run --rm -e CONCC_DEBUG_WORKSPACEFS=$(DEBUG_WORKSPACEFS) client \
 	  concc -C src -p $(PROJECT) -w $(WORKERS) '$(TIME_CLIENT) $(BUILD_CMD)'
 
 # Project and worker containers will be kept running for debugging.
@@ -67,12 +67,13 @@ remote-build: buildenv secrets workspace
 	  docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d \
 	    --device /dev/fuse --tmpfs /run --tmpfs /tmp -p $(SSH_PORT):22/tcp \
 	    --cap-add SYS_ADMIN --security-opt apparmor:unconfined $(DOCKER_OPTIONS) \
+      -e RUST_LOG=debug \
 	    $(BUILDENV) concc-worker; \
 	done
 	docker compose up -d project
 	docker compose run --rm client concc -C src -l '$(CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
-	docker compose run --rm -e CONCC_DEBUG_SSHFS=$(DEBUG_SSHFS) client \
+	docker compose run --rm -e CONCC_DEBUG_WORKSPACEFS=$(DEBUG_WORKSPACEFS) client \
 	  concc -C src -p $(shell uname -n):$(SSH_PORT) -w $(REMOTE_WORKERS) \
 	  '$(TIME_CLIENT) $(BUILD_CMD)'
 

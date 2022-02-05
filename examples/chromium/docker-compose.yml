@@ -26,8 +26,8 @@ services:
       - /tmp
 
   project:
-    image: atmoz/sftp
-    #image: corilus/sftp  # for debugging
+    #image: atmoz/sftp
+    image: corilus/sftp  # for debugging
     init: true
     ports:
       - '2222:22/tcp'

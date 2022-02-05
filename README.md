@@ -207,7 +207,7 @@ in the build system.
 * fusermount or fusermount3
   * Neither libfuse2 nor libfuse3 is required
 * OpenSSH
-* [masnagam/sshfs-rs]
+* [concc-build/workspacefs]
 
 ## TODO
 
@@ -224,5 +224,5 @@ in the build system.
 [distcc]: https://distcc.github.io/
 [Docker]: https://en.wikipedia.org/wiki/Docker_(software)
 [SSHFS]: https://github.com/libfuse/sshfs
-[masnagam/sshfs-rs]: https://github.com/masnagam/sshfs-rs
+[concc-build/workspacefs]: https://github.com/concc-build/workspacefs
 [MIT]: ./LICENSE
