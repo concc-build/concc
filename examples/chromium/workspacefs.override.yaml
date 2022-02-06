@@ -2,12 +2,6 @@ cache:
   dentry-cache:
     excludes:
       - src/out/*
-  attr:
-    excludes:
-      - src/out/*
-  entry:
-    excludes:
-      - src/out/*
   negative:
     excludes:
       - src/out/*

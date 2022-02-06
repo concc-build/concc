@@ -150,6 +150,8 @@ gid-map:
   - local: 0
     remote: $CONCC_GID
 cache:
+  excludes:
+    - .concc.d/*
   attr:
     timeout: 1d
   entry:

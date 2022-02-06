@@ -12,7 +12,8 @@ DEBUG_WORKSPACEFS ?= 0
 ITERATIONS ?= 10
 DOCKER_OPTIONS ?=
 
-CONCC_TOOLS := masnagam/concc-tools
+TOOLS_IMAGE := masnagam/concc-tools
+TOOLS_BUILD_OPTIONS ?=
 PROJECT := $$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')
 WORKERS := $$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')
 REMOTE_WORKERS := $(subst $(SPACE),$(SEP),$(addsuffix :$(SSH_PORT),$(REMOTES)))
@@ -67,7 +68,6 @@ remote-build: buildenv secrets workspace
 	  docker -H ssh://$$REMOTE run --name $(REMOTE_CONTAINER) --rm --init -d \
 	    --device /dev/fuse --tmpfs /run --tmpfs /tmp -p $(SSH_PORT):22/tcp \
 	    --cap-add SYS_ADMIN --security-opt apparmor:unconfined $(DOCKER_OPTIONS) \
-      -e RUST_LOG=debug \
 	    $(BUILDENV) concc-worker; \
 	done
 	docker compose up -d project
@@ -80,7 +80,7 @@ remote-build: buildenv secrets workspace
 .PHONY: nondist-build
 nondist-build: JOBS ?= $(NPROC)
 nondist-build: buildenv secrets workspace
-	make src-clean
+	$(MAKE) src-clean
 	docker compose run --rm client concc -C src -l '$(NONDIST_CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm client \
@@ -89,7 +89,7 @@ nondist-build: buildenv secrets workspace
 .PHONY: icecc-build
 icecc-build: JOBS ?= 32
 icecc-build: buildenv secrets workspace
-	make src-clean
+	$(MAKE) src-clean
 	docker compose run --rm client concc -C src -l '$(ICECC_CONFIGURE_CMD)'
 	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	docker compose run --rm client \
@@ -139,10 +139,10 @@ $(METRICS_DIR)/%.json: $(METRICS_DIR)/%.times $(METRICS_JSON_PY)
 # You NEED to run `docker image prune` if you want to remove dangling images.
 .PHONY: clean-all
 clean-all: src-clean local-clean remote-clean
-	make secrets-clean
+	$(MAKE) secrets-clean
 	rm -rf workspace
 	docker image rm -f $(BUILDENV)
-	docker image rm -f $(CONCC_TOOLS)
+	docker image rm -f $(TOOLS_IMAGE)
 
 .PHONY: clean
 clean: src-clean local-clean
@@ -176,7 +176,7 @@ buildenv: concc-tools
 
 .PHONY: concc-tools
 concc-tools:
-	make -C ../../docker
+	$(MAKE) -C ../../docker BUILD_OPTIONS=$(TOOLS_BUILD_OPTIONS)
 
 .PHONY: secrets
 secrets: users.conf password
