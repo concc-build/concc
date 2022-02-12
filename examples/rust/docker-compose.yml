@@ -8,6 +8,7 @@ services:
       - NET_ADMIN
     volumes:
       - ./workspace:/workspace
+      - ./scripts:/opt/concc/scripts
     tmpfs:
       - /tmp
     secrets:

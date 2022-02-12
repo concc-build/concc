@@ -1,10 +1,14 @@
 #!/bin/sh
 
+EXEC_LOCAL=0
+EXEC_REMOTE=1
+CMD="$@"
+
 while [ $# -gt 0 ]
 do
   case "$1" in
     '-shared')
-      exit 0  # run locally
+      exit $EXEC_LOCAL
       ;;
     *)
       shift
@@ -12,4 +16,4 @@ do
   esac
 done
 
-exit 1  # dispatch the job
+exit $EXEC_REMOTE

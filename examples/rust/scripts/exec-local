@@ -1,0 +1,23 @@
+#!/bin/sh
+
+EXEC_LOCAL=0
+EXEC_REMOTE=1
+CMD="$@"
+
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    '--crate-type')
+      if [ "$2" = bin ] || [ "$2" = proc-macro ]
+      then
+        exit $EXEC_LOCAL
+      fi
+      shift 2
+      ;;
+    *)
+      shift
+      ;;
+  esac
+done
+
+exit $EXEC_REMOTE
