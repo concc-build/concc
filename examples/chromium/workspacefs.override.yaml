@@ -1,7 +1,4 @@
 cache:
-  dentry-cache:
-    excludes:
-      - src/out/*
   negative:
     excludes:
       - src/out/*
