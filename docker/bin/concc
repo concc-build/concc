@@ -11,6 +11,7 @@ WORKDIR=$(pwd)
 PROJECT=$(hostname)
 WORKERS=
 VERBOSE=0
+RTT_DELAY=
 
 help() {
   cat <<EOF >&2
@@ -36,6 +37,10 @@ OPTIONS:
 
   -v, --verbose <verbose> [default: $VERBOSE]
     Verbose level.
+
+OPTIONS FOR TEST PURPOSES:
+  --rtt-delay <delay> [default: no delay]
+    Simuate a high RTT.
 
 ARGUMENTS:
   <script>
@@ -84,6 +89,10 @@ do
       ;;
     '-v' | '--verbose')
       VERBOSE=$2
+      shift 2
+      ;;
+    '--rtt-delay')
+      RTT_DELAY=$2
       shift 2
       ;;
     *)
@@ -211,5 +220,11 @@ do
 done
 
 vlog 1 "Total maximum number of jobs: $(gosu concc concc-worker-pool limit)"
+
+if [ -n "$RTT_DELAY" ]
+then
+  vlog 1 "Delay RTT by $RTT_DELAY"
+  tc qdisc add dev eth0 root netem delay $RTT_DELAY
+fi
 
 (cd $WORKDIR; exec gosu concc sh -c "$SCRIPT")

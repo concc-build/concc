@@ -1,0 +1,12 @@
+ARG BASE
+FROM $BASE
+RUN set -eux \
+ && export DEBIAN_FRONTEND=noninteractive \
+ && apt-get update \
+ # for simulating a high rtt
+ && apt-get install -y --no-install-recommends iproute2 \
+ # cleanup
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /var/tmp/* \
+ && rm -rf /tmp/*

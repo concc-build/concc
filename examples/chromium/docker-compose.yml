@@ -4,6 +4,8 @@ services:
   client:
     image: chromium-buildenv
     init: true
+    cap_add:
+      - NET_ADMIN
     volumes:
       - ./workspace:/workspace
       - ./scripts:/opt/concc/scripts
@@ -19,6 +21,8 @@ services:
     init: true
     command: >-
       concc-worker
+    cap_add:
+      - NET_ADMIN
     privileged: true
     devices:
       - /dev/fuse:/dev/fuse
@@ -26,9 +30,15 @@ services:
       - /tmp
 
   project:
-    image: atmoz/sftp
-    #image: corilus/sftp  # for debugging
+    image: masnagam/concc-sftp
+    build:
+      dockerfile: ../Dockerfile.sftp
+      args:
+        BASE: atmoz/sftp
+        #BASE: corilus/sftp  # for debugging
     init: true
+    cap_add:
+      - NET_ADMIN
     ports:
       - '2222:22/tcp'
     volumes:
