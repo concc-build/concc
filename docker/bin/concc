@@ -170,7 +170,7 @@ if [ -f /workspace/workspacefs.override.yaml ]
 then
   # Merge workspacefs.override.yaml into workspacefs.yaml.
   # See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#merge-combine-all-documents-into-one
-  yq ea -i '. as $item ireduce ({}; . * $item )' /tmp/workspacefs.yaml \
+  yq ea -i '. as $item ireduce ({}; . *+ $item)' /tmp/workspacefs.yaml \
     /workspace/workspacefs.override.yaml
 fi
 
