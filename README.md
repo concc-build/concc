@@ -115,10 +115,51 @@ Each client container contains the following commands:
   * Manages available worker containers
   * Assigns a worker container in the pool for a build job
 
+## Is this a correct approach?
+
+Well, I'm not sure at this point.  And nobody has the answer probably.  That's
+the reason why I started this project.
+
+One of normal (and better) approaches is to start making a definition of a job
+specification which requires to explicitly define inputs and outputs of each job
+that we want to distribute its execution.  See [bazelbuild/remote-apis] for how
+Bazel defines it.
+
+We explain the importance of the job definition with the following simplified
+example.
+
+```Makefile
+out/product: source | out
+	cat $< >$@
+
+out:
+	mkdir -p $@
+```
+
+Before we distribute the command execution for the `out/product` target to a
+remote machine, the `out` directory must exist in the remote workspace.  If the
+`out` directory is created on a machine other than the remote machine, we need
+to apply the change to the remote workspace before the command execution.
+
+Of course, we can solve such issues in simple cases.  However, there are
+more complex situations that we cannot solve them without sacrificing the build
+performance if we don't have the job definition with exact inputs and outputs.
+
+Actually, we faced similar situations in [examples/chromium].  Ninja creates
+missing directories on the local PC before executing a command which will be
+distributed by `concc-exec`.  We solved such issues by disabling
+`cache.negative` for `src/out/*`, but this probably causes the build performance
+degradation.
+
+> We cannot measure the amount of the build performance degradation, unfortunately.
+> Because the build fails without disabling the `cache.negative`.
+
+We can conclude whether our approach is good or not if the PoC implementation is
+comparable with other distributed build systems.
+
 ## Performance comparison
 
-The following tables are performance comparisons using
-[examples/chromium](./examples/chromium).
+The following tables are performance comparisons using [examples/chromium].
 
 You can also see screenshots of grafana dashboard for performance metrics in
 [this Google Drive folder](https://drive.google.com/drive/folders/1CYnSDMGbRKTBH4tQkYAGmocF_ZMimWib?usp=sharing).
@@ -197,6 +238,10 @@ stationary phase.
 concc sometimes stopped due to IO errors which were probably caused by some bugs
 in the build system.
 
+## Conclusion
+
+Under investigation...
+
 ## System Requirements
 
 * Linux with a FUSE module
@@ -224,5 +269,7 @@ in the build system.
 [distcc]: https://distcc.github.io/
 [Docker]: https://en.wikipedia.org/wiki/Docker_(software)
 [SSHFS]: https://github.com/libfuse/sshfs
+[bazelbuild/remote-apis]: https://github.com/bazelbuild/remote-apis/blob/main/build/bazel/remote/execution/v2/remote_execution.proto
+[examples/chromium]: ./examples/chromium
 [concc-build/workspacefs]: https://github.com/concc-build/workspacefs
 [MIT]: ./LICENSE
