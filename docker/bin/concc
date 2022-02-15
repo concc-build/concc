@@ -5,13 +5,12 @@ export CONCC_DIR=/home/concc
 PROGNAME=$(basename $0)
 BASEDIR=$(cd $(dirname $0); pwd)
 
-DEFAULT_SSH_PORT=22
-
 WORKDIR=$(pwd)
-PROJECT=$(hostname)
-WORKERS=
+PROJECT=$CONCC_PROJECT
+WORKERS=$CONCC_WORKER_LIST
 VERBOSE=0
-RTT_DELAY=
+
+RTT_DELAY=$CONCC_RTT_DELAY
 
 help() {
   cat <<EOF >&2
@@ -29,7 +28,7 @@ OPTIONS:
     Execute jobs in the local container.
 
   -p, --project <project> [default: '$PROJECT']
-    A colon-separated pair of the hostname and the port number of the project
+    A space-separated pair of the hostname and the port number of the project
     container in the form <hostname>[:<port>].
 
   -w, --workers <workers> [default: '$WORKERS']
@@ -56,7 +55,7 @@ log() {
 vlog() {
   if [ $VERBOSE -ge $1 ]
   then
-    log "$2"
+    log "LOG($1): $2"
   fi
 }
 
@@ -105,7 +104,6 @@ SCRIPT="$@"
 
 PROJECT_HOST=$(echo "$PROJECT:" | cut -d ':' -f 1)
 PROJECT_PORT=$(echo "$PROJECT:" | cut -d ':' -f 2)
-PROJECT_PORT=${PROJECT_PORT:-$DEFAULT_SSH_PORT}
 PROJECT="$PROJECT_HOST:$PROJECT_PORT"
 
 CONCC_UID=$(ls -ld /workspace | cut -d ' ' -f 3)
@@ -137,57 +135,10 @@ fi
 vlog 1 "Initializing the worker pool..."
 gosu concc concc-worker-pool reset
 
-cat <<EOF >/tmp/mount.sh
-if [ "\$CONCC_DEBUG_WORKSPACEFS" = 1 ]
-then
-  export RUST_LOG=trace
-fi
-/opt/concc/bin/workspacefs /workspace
-EOF
-
-cat <<EOF >/tmp/workspacefs.yaml
-fuse:
-  mount-options:
-    - fsname=workspacefs
-    - default_permissions
-  fusermount: $(which fusermount)
-  time-gran: 1000000000
-uid-map:
-  - local: 0
-    remote: $CONCC_UID
-gid-map:
-  - local: 0
-    remote: $CONCC_GID
-cache:
-  excludes:
-    - .concc.d/*
-  attr:
-    timeout: 1d
-  entry:
-    timeout: 1d
-  negative:
-    timeout: 1d
-remote:
-  sftp:
-    user: concc
-    host: $PROJECT_HOST
-    port: $PROJECT_PORT
-    path: /workspace
-    ssh-command: sshpass -f /tmp/password ssh
-EOF
-if [ -f /workspace/workspacefs.override.yaml ]
-then
-  # Merge workspacefs.override.yaml into workspacefs.yaml.
-  # See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#merge-combine-all-documents-into-one
-  yq ea -i '. as $item ireduce ({}; . *+ $item)' /tmp/workspacefs.yaml \
-    /workspace/workspacefs.override.yaml
-fi
-
-for WORKER in $(echo "$WORKERS" | tr ',' ' ')
+for WORKER in $WORKERS
 do
   WORKER_HOST=$(echo "$WORKER:" | cut -d ':' -f 1)
   WORKER_PORT=$(echo "$WORKER:" | cut -d ':' -f 2)
-  WORKER_PORT=${WORKER_PORT:-$DEFAULT_SSH_PORT}
   WORKER="$WORKER_HOST:$WORKER_PORT"
 
   if ssh -p $WORKER_PORT $WORKER_HOST test -f /tmp/ready
@@ -207,19 +158,16 @@ do
 
   vlog 1 "Add $WORKER to the worker pool..."
   gosu concc concc-worker-pool add $WORKER $LIMIT
-
-  vlog 1 "$WORKER: Mounting the workspace directory from $PROJECT..."
-  scp -P $WORKER_PORT /run/secrets/password $WORKER_HOST:/tmp/password
-  scp -P $WORKER_PORT /tmp/workspacefs.yaml $WORKER_HOST:/workspace/workspacefs.yaml
-  scp -P $WORKER_PORT /tmp/mount.sh $WORKER_HOST:/tmp/.mount.sh
-  ssh -p $WORKER_PORT $WORKER_HOST mv /tmp/.mount.sh /tmp/mount.sh
-  while ! ssh -p $WORKER_PORT $WORKER_HOST test -d /workspace/.workspacefs.d
-  do
-    sleep 1
-  done
 done
 
 vlog 1 "Total maximum number of jobs: $(gosu concc concc-worker-pool limit)"
+
+if [ -n "$ICECC_SCHEDULER" ]
+then
+  vlog 1 "Start iceccd in background"
+  iceccd -d -m 0 -s $ICECC_SCHEDULER -n concc-poc
+  sleep 10  # needs for waiting for connections between sched and daemons
+fi
 
 if [ -n "$RTT_DELAY" ]
 then
@@ -227,4 +175,5 @@ then
   tc qdisc add dev eth0 root netem delay $RTT_DELAY
 fi
 
+vlog 1 "Run \`$SCRIPT\`"
 (cd $WORKDIR; exec gosu concc sh -c "$SCRIPT")

@@ -1,7 +1,5 @@
 #!/bin/sh
 
-MOUNT_SH=/tmp/mount.sh
-
 MAX_JOBS=${CONCC_MAX_JOBS:-$(nproc)}
 echo $MAX_JOBS >/tmp/.concc-max-jobs
 
@@ -9,15 +7,5 @@ sed -i "s|#MaxSessions .*|MaxSessions $MAX_JOBS|" /etc/ssh/sshd_config
 sed -i "s|#MaxStartups .*|MaxStartups $MAX_JOBS:100:100|" /etc/ssh/sshd_config
 /etc/init.d/ssh start
 
-while true
-do
-  if [ -f $MOUNT_SH ]
-  then
-    break
-  else
-    sleep 1
-  fi
-done
-
 echo "Mounting the workspace directory..."
-sh $MOUNT_SH
+/opt/concc/bin/workspacefs /workspace

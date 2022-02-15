@@ -1,5 +1,5 @@
 FROM rust
-COPY --from=masnagam/concc-tools /opt/concc /opt/concc/
+COPY --from=concc-poc/tools /opt/concc /opt/concc/
 RUN sh -eux /opt/concc/setup.sh
 EXPOSE 22/tcp
 WORKDIR /workspace

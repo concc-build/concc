@@ -6,6 +6,7 @@ apt-get install -y --no-install-recommends strace  # for tracing syscalls
 apt-get install -y --no-install-recommends time  # for measurements
 apt-get install -y --no-install-recommends iproute2  # for simulating a high rtt
 apt-get install -y --no-install-recommends iputils-ping  # for measuring rtt
+apt-get install -y --no-install-recommends icecc icecream-sundae  # for performance comparison
 
 YQ_VERSION=v4.16.2
 YQ_BINARY=yq_linux_amd64

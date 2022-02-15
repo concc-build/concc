@@ -3,17 +3,11 @@
 ## Make a buildenv image
 
 ```shell
-docker buildx build -t gcc-buildenv .
+make base-images
+docker buildx build -t concc-poc/gcc-buildenv .
 ```
 
-## Create a SFTP account
-
-```shell
-echo "password" >password
-echo "concc:$(cat password):$(id -u):$(id -g):workspace" >users.conf
-```
-
-## Build with local worker containers
+## Prepare a project workspace
 
 Clone some source tree into the `workspace/src` directory:
 
@@ -21,63 +15,36 @@ Clone some source tree into the `workspace/src` directory:
 git clone --depth=1 https://github.com/facebook/zstd.git workspace/src
 ```
 
-Launch local worker containers:
+## Build with worker containers
+
+Run `configure` if needed:
 
 ```shell
-docker compose up -d worker
-```
-
-Launch a project container:
-
-```shell
-docker compose up -d project
+concc-boot -C workspace -i concc-poc/gcc-buildenv -s scripts -l \
+  concc -C src './autogen.sh'
 ```
 
 Then, build it with worker containers:
 
 ```shell
-docker compose run --rm client concc -C src \
-  -p "$(docker compose ps -q project | xargs docker inspect | jq -r '.[].Name[1:]')" \
-  -w "$(docker compose ps -q worker | xargs docker inspect | jq -r '.[].Name[1:]' | tr '\n' ',')" \
+concc-boot -C workspace -i concc-poc/gcc-buildenv -s scripts \
+  concc -C src \
   'make -j $(concc-worker-pool limit) CC="concc-exec gcc"'
 ```
+
+Specify worker hosts when building with remote worker containers:
+
+```shell
+concc-boot -C workspace -i concc-poc/gcc-buildenv -s scripts -w remote \
+  concc -C src \
+  'make -j $(concc-worker-pool limit) CC="concc-exec gcc"'
+```
+
+where `remote` must be accessible via SSH.
 
 Using `docker stats`, you can confirm that build jobs will be distributed to the
 worker containers.
 
-`gcc` will be executed on the worker container.  Unlike `icecc`, all
-preprocessor directives including `#include` directives are processed on the
-worker container.
-
-## Build with remote Worker containers
-
-Transfer the image from the local machine to the remote machine:
-
-```shell
-docker save gcc-buildenv | docker -H ssh://$REMOTE load
-```
-
-Client and worker containers have to be created from the **same** image so that
-SSH connections establish.
-
-Launch a worker container on a remote machine:
-
-```shell
-docker -H ssh://$REMOTE run --name gcc-worker --rm --init -d \
-  --device /dev/fuse --privileged -p 2222:22/tcp gcc-buildenv \
-  concc-worker
-```
-
-Launch a project container:
-
-```shell
-docker compose up -d project
-```
-
-Then, build with the remote worker container:
-
-```shell
-docker compose run --rm client \
-  concc -C src -p $(hostname):2222 -w $REMOTE:2222 \
-  'make -j $(concc-worker-pool limit) CC="concc-exec gcc"'
-```
+`gcc` will be executed on worker containers.  Unlike `icecc`, all preprocessor
+directives including `#include` directives are processed on the worker
+containers.

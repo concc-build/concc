@@ -1,0 +1,501 @@
+#!/bin/sh -eu
+
+PROGNAME=$(basename $0)
+BASEDIR=$(cd $(dirname $0); pwd)
+
+LOCALHOST=$(hostnamectl hostname)
+
+WORKSPACE=$(pwd)
+IMAGE=
+LOCAL=
+WORKER_HOST_LIST=
+SCRIPTS_DIR=
+VERBOSE=0
+KEEP=
+CLEAN=
+RTT_DELAY=
+RTT_DELAY_CMD=
+LOG_SFTP=
+ICECC=
+SCRIPT=sh
+
+help() {
+  cat <<EOF >&2
+Execute a script on a concc distributed build system
+
+USAGE:
+  $PROGNAME [-C <dir>] [-l] [-v <verbose>] [-i <image>] [<script>]
+  $PROGNAME -h | --help
+
+OPTIONS:
+  -C <dir> [default: $WORKSPACE]
+    Change to <dir> before doing anything else.
+
+  -i, --image
+    Docker image used as the build environment.
+
+  -l, --local
+    Execute the script locally in a client container.
+
+  -w, --worker <worker> [default: $LOCALHOST]
+    Hostname of a worker machine.
+
+  -s, --scripts <scripts-dir>
+
+  -v, --verbose <verbose> [default: $VERBOSE]
+    Verbose level.
+
+OPTIONS FOR TEST PURPOSES:
+  --keep
+    Keep containers and .concc.d for debugging.
+    Those must be removed manually before starting new build.
+
+  --clean
+    Remove containers and .concc.d.
+
+  --rtt-delay <delay> [default: no delay]
+    Simuate a high RTT.
+
+  --log-sftp
+    Enable logging sftp messages.
+
+  --icecc
+    Execute the command on the icecc distribute build system instead of concc.
+
+ARGUMENTS:
+  <script> [default: $SCRIPT]
+    A script to be executed by the concc user in a client container with an
+    interactive TTY.
+
+DESCRIPTION:
+  This program bootstraps a local build system with a specified workspace
+  directory and executes a spcified script on it.
+
+  The following Docker containers will be created:
+
+    * A project container which mounts the local workspace and share files
+      in the workspace with other containers using the SFPT protocol
+    * Worker containers which mounts the workspace using workspacefs connected
+      to the project container
+    * A client container which mounts the local workspace and executes the
+      script inside it
+EOF
+  exit 0
+}
+
+log() {
+  echo "$1" >&2
+}
+
+vlog() {
+  if [ $VERBOSE -ge $1 ]
+  then
+    log "LOG($1): $2"
+  fi
+}
+
+error() {
+  log "ERROR: $1"
+  exit 1
+}
+
+clean() {
+  vlog 1 "cleanup"
+  for WORKER_HOST in $WORKER_HOST_LIST
+  do
+    if [ "$WORKER_HOST" = "$LOCALHOST" ]
+    then
+      DOCKER_HOST_OPTION=
+    else
+      DOCKER_HOST_OPTION="-H ssh://$WORKER_HOST"
+    fi
+    $DOCKER $DOCKER_HOST_OPTION stop concc-poc-worker >/dev/null 2>&1 || true
+    $DOCKER $DOCKER_HOST_OPTION stop concc-poc-icecc-daemon >/dev/null 2>&1 || true
+  done
+  $DOCKER stop concc-poc-icecc-scheduler >/dev/null 2>&1 || true
+  $DOCKER stop concc-poc-project >/dev/null 2>&1 || true
+  /bin/rm -rf $DOT_CONCC_D
+}
+
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    '-h' | '--help')
+      help
+      ;;
+    '-C')
+      WORKSPACE="$(cd $2; pwd)"
+      shift 2
+      ;;
+    '-i' | '--image')
+      IMAGE="$2"
+      shift 2
+      ;;
+    '-l' | '--local')
+      LOCAL=1
+      shift
+      ;;
+    '-w' | '--worker')
+      if [ -n "$WORKER_HOST_LIST" ]
+      then
+        WORKER_HOST_LIST="$WORKER_HOST_LIST $2"
+      else
+        WORKER_HOST_LIST="$2"
+      fi
+      shift 2
+      ;;
+    '-s' | '--scripts')
+      SCRIPTS_DIR="$(cd $2; pwd)"
+      shift 2
+      ;;
+    '-v' | '--verbose')
+      VERBOSE=$2
+      shift 2
+      ;;
+    '--keep')
+      KEEP=1
+      shift
+      ;;
+    '--clean')
+      CLEAN=1
+      shift
+      ;;
+    '--rtt-delay')
+      RTT_DELAY=$2
+      shift 2
+      ;;
+    '--log-sftp')
+      LOG_SFTP=1
+      shift
+      ;;
+    '--icecc')
+      ICECC=1
+      shift
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ -z "$WORKER_HOST_LIST" ]
+then
+  WORKER_HOST_LIST=$LOCALHOST
+fi
+
+if [ $# -gt 0 ]
+then
+  SCRIPT="$@"
+fi
+
+if id -nG | grep -q docker; then
+    DOCKER='docker'
+else
+    DOCKER='sudo docker'
+fi
+
+if [ -n "$SCRIPTS_DIR" ]
+then
+  MOUNT_SCRIPTS="-v $SCRIPTS_DIR:/opt/concc/scripts"
+else
+  MOUNT_SCRIPTS=
+fi
+
+if [ -n "$RTT_DELAY" ]
+then
+  vlog 1 "RTT += $RTT_DELAY"
+  RTT_DELAY_CMD="tc qdisc add dev eth0 root netem delay $RTT_DELAY"
+fi
+
+DOT_CONCC_D=$WORKSPACE/.concc.d
+
+if [ -n "$LOCAL" ]
+then
+  $DOCKER run \
+    --rm --init -it \
+    -v $WORKSPACE:/workspace \
+    $MOUNT_SCRIPTS \
+    -e "CONCC_PROJECT=" \
+    -e "CONCC_WORKER_LIST=" \
+    -e "CONCC_RTT_DELAY=" \
+    -e "CONCC_EXEC_LOCAL=1" \
+    $IMAGE \
+    $SCRIPT
+  exit $?
+fi
+
+if [ -n "$CLEAN" ]
+then
+  clean
+  exit
+fi
+
+# guard for multiple executions
+
+if [ -e "$DOT_CONCC_D" ]
+then
+  error "Cannot execute concc multiple times on the same workspace"
+fi
+
+mkdir -p $DOT_CONCC_D
+
+# release allocated resources before the termination
+
+if [ -n "$KEEP" ]
+then
+  log "--keep: Remove allocated resources manually before starting new build."
+else
+  trap clean EXIT INT TERM
+fi
+
+# project container
+
+CONCC_PROJECT=
+ICECC_SCHEDULER=
+
+start_project() {
+  SECRET="$(head -c 32 /dev/urandom | base64 | tr -d '=')"
+
+  USERS_CONF=$DOT_CONCC_D/sftp.users.conf
+  echo "concc:$SECRET:$(id -u):$(id -g):workspace" >$USERS_CONF
+
+  SFTP_SECRET=$DOT_CONCC_D/sftp.secret
+  echo "$SECRET" >$SFTP_SECRET
+
+  if [ -n "$LOG_SFTP" ]
+  then
+    SFPT_IMAGE='concc-poc/sftp-debug'
+  else
+    SFPT_IMAGE='concc-poc/sftp'
+  fi
+
+  ID=$($DOCKER container run -d --rm --init \
+       --name concc-poc-project \
+       -p :22/tcp \
+       -v $WORKSPACE:/home/concc/workspace \
+       -v $USERS_CONF:/etc/sftp/users.conf:ro \
+       --cap-add NET_ADMIN \
+       $SFPT_IMAGE)
+  HOST=$LOCALHOST
+  PORT=$($DOCKER port $ID 22/tcp | \
+         grep '0.0.0.0' | cut -d ':' -f 2)
+  vlog 1 "project: $HOST:$PORT:$ID"
+
+  # wait for sshd to start
+  while ! $DOCKER exec $ID test -f /run/sshd.pid
+  do
+    sleep 1
+  done
+
+  if [ -n "$RTT_DELAY_CMD" ]
+  then
+    $DOCKER exec $ID $RTT_DELAY_CMD
+  fi
+
+  echo "$HOST:$PORT"
+}
+
+# icecc scheduler
+
+start_icecc_scheduler() {
+  HOST=$LOCALHOST
+  PORT=8764  # 8765 -1
+
+  ID=$($DOCKER run -d --rm --init \
+       --name concc-poc-icecc-scheduler \
+       -p $PORT:$PORT/tcp \
+       --cap-add NET_ADMIN \
+       concc-poc/icecc-scheduler \
+       -n concc-poc -r -p $PORT)
+
+  vlog 1 "icecc-scheduler: $HOST:$PORT:$ID"
+
+  if [ -n "$RTT_DELAY_CMD" ]
+  then
+    $DOCKER exec $ID $RTT_DELAY_CMD
+  fi
+
+  echo "$HOST:$PORT"
+}
+
+if [ -n "$ICECC" ]
+then
+  ICECC_SCHEDULER=$(start_icecc_scheduler)
+else
+  CONCC_PROJECT=$(start_project)
+fi
+
+# worker containers
+
+WORKSPACEFS_YAML=$DOT_CONCC_D/workspacefs.yaml
+cat <<EOF >$WORKSPACEFS_YAML
+fuse:
+  mount-options:
+    - fsname=workspacefs
+    - default_permissions
+  fusermount: $($DOCKER run --rm $IMAGE which fusermount)
+  time-gran: 1000000000
+uid-map:
+  - local: 0
+    remote: $(id -u)
+gid-map:
+  - local: 0
+    remote: $(id -g)
+cache:
+  excludes:
+    - .concc.d/*
+  attr:
+    timeout: 1d
+  entry:
+    timeout: 1d
+  negative:
+    timeout: 1d
+remote:
+  sftp:
+    user: concc
+    host: $(echo $CONCC_PROJECT | cut -d ':' -f 1)
+    port: $(echo $CONCC_PROJECT | cut -d ':' -f 2)
+    path: /workspace
+    ssh-command: sshpass -f /workspace/sftp.secret ssh
+EOF
+
+if [ -f $WORKSPACE/workspacefs.override.yaml ]
+then
+  # Merge workspacefs.override.yaml into workspacefs.yaml.
+  # See https://mikefarah.gitbook.io/yq/usage/tips-and-tricks#merge-combine-all-documents-into-one
+  $DOCKER run --rm -v $WORKSPACE:/workspace \
+    mikefarah/yq ea -i '. as $item ireduce ({}; . *+ $item)' \
+    /workspace/.concc.d/workspacefs.yaml /workspace/workspacefs.override.yaml
+fi
+
+transfer_image() {
+  HOST=$1
+  IMAGE=$2
+
+  DOCKER_HOST_OPTION="-H ssh://$HOST"
+
+  LOCAL_IMAGE=$($DOCKER image ls -q $IMAGE)
+  REMOTE_IMAGE=$($DOCKER $DOCKER_HOST_OPTION image ls -q $IMAGE)
+  if [ "$LOCAL_IMAGE" = "$REMOTE_IMAGE" ]
+  then
+    vlog 1 "$IMAGE already exists on $HOST"
+  else
+    vlog 1 "Transferring $IMAGE to $HOST..."
+    $DOCKER $DOCKER_HOST_OPTION image rm -f $IMAGE 2>/dev/null
+    $DOCKER save $IMAGE | $DOCKER $DOCKER_HOST_OPTION load
+  fi
+}
+
+start_worker() {
+  HOST=$1
+
+  if [ "$HOST" = "$LOCALHOST" ]
+  then
+    DOCKER_HOST_OPTION=
+  else
+    DOCKER_HOST_OPTION="-H ssh://$HOST"
+    transfer_image $HOST $IMAGE
+  fi
+
+  # FIXME(masnagam/concc#1): remove SYS_ADMIN
+  # NET_ADMIN is required for simulating a high RTT.
+  vlog 1 "Creating a worker container on $HOST..."
+  ID=$($DOCKER $DOCKER_HOST_OPTION container create --rm --init \
+       --name concc-poc-worker \
+       --device /dev/fuse \
+       --tmpfs /run --tmpfs /tmp \
+       -p :22/tcp \
+       --cap-add SYS_ADMIN --security-opt apparmor:unconfined \
+       --cap-add NET_ADMIN \
+       $IMAGE \
+       /opt/concc/bin/concc-worker)
+
+  vlog 1 "Copying secrets to the worker container on $HOST..."
+  tar c -C $DOT_CONCC_D ./ | \
+    $DOCKER $DOCKER_HOST_OPTION cp - $ID:/workspace
+
+  vlog 1 "Starting the worker container on $HOST..."
+  $DOCKER $DOCKER_HOST_OPTION container start $ID >/dev/null
+
+  # wait for workspacefs to mount
+  while ! $DOCKER $DOCKER_HOST_OPTION exec $ID test -d /workspace/.workspacefs.d
+  do
+    sleep 1
+  done
+
+  PORT=$($DOCKER $DOCKER_HOST_OPTION port $ID 22/tcp | \
+         grep '0.0.0.0' | cut -d ':' -f 2)
+  CONCC_WORKER="$HOST:$PORT"
+  vlog 1 "worker: $HOST:$PORT:$ID"
+
+  if [ -n "$RTT_DELAY_CMD" ]
+  then
+    $DOCKER $DOCKER_HOST_OPTION exec $ID $RTT_DELAY_CMD
+  fi
+
+  echo "$HOST:$PORT"
+}
+
+start_icecc_daemon() {
+  PORT=10246  # 10245 +1
+
+  HOST=$1
+  ICECC_SCHEDULER=$2
+
+  if [ "$HOST" = "$LOCALHOST" ]
+  then
+    DOCKER_HOST_OPTION=
+  else
+    DOCKER_HOST_OPTION="-H ssh://$HOST"
+    transfer_image $HOST concc-poc/icecc-daemon
+  fi
+
+  ID=$($DOCKER $DOCKER_HOST_OPTION run -d --rm --init \
+       --name concc-poc-icecc-daemon \
+       -p $PORT:$PORT/tcp \
+       --cap-add NET_ADMIN \
+       concc-poc/icecc-daemon \
+       -n concc-poc -s $ICECC_SCHEDULER -b /var/cache/icecc -p $PORT)
+
+  vlog 1 "icecc-daemon: $HOST:$PORT:$ID"
+
+  if [ -n "$RTT_DELAY_CMD" ]
+  then
+    $DOCKER $DOCKER_HOST_OPTION exec $ID $RTT_DELAY_CMD
+  fi
+
+  echo "$HOST:$PORT"
+}
+
+CONCC_WORKER_LIST=
+
+for WORKER_HOST in $WORKER_HOST_LIST
+do
+  if [ -n "$ICECC" ]
+  then
+    ICECC_DAEMON=$(start_icecc_daemon $WORKER_HOST $ICECC_SCHEDULER)
+  else
+    CONCC_WORKER=$(start_worker $WORKER_HOST)
+    if [ -n "$CONCC_WORKER_LIST" ]
+    then
+      CONCC_WORKER_LIST="$CONCC_WORKER_LIST $CONCC_WORKER"
+    else
+      CONCC_WORKER_LIST="$CONCC_WORKER"
+    fi
+  fi
+done
+
+# client container
+
+vlog 1 "run \`$SCRIPT\` on a client container"
+$DOCKER run --rm --init -it \
+  --name concc-poc-client \
+  -v $WORKSPACE:/workspace \
+  $MOUNT_SCRIPTS \
+  -e "CONCC_PROJECT=$CONCC_PROJECT" \
+  -e "CONCC_WORKER_LIST=$CONCC_WORKER_LIST" \
+  -e "CONCC_RTT_DELAY=$RTT_DELAY" \
+  -e "ICECC_SCHEDULER=$ICECC_SCHEDULER" \
+  --cap-add NET_ADMIN \
+  $IMAGE \
+  $SCRIPT

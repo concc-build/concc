@@ -7,21 +7,23 @@ GCC ?= gcc
 CONCC_CC = "$(TIME_CLIENT) concc-exec $(TIME_WORKER) $(GCC)"
 NONDIST_CC = "$(TIME_NONDIST) $(STRACE) $(GCC)"
 ICECC_CC = "$(TIME_ICECC) icecc $(GCC)"
+ICECC_ENV := ICECC_REMOTE_CPP=1
 
-BUILDENV := gcc-buildenv
-REMOTE_CONTAINER := gcc-worker
+BUILDENV := concc-poc/gcc-buildenv
 REPO := https://github.com/jemalloc/jemalloc.git
 CONFIGURE_CMD := ./autogen.sh
 BUILD_CMD = make -j $(JOBS) CC=$(CONCC_CC)
 NONDIST_CONFIGURE_CMD := $(CONFIGURE_CMD)
 NONDIST_BUILD_CMD = make -j $(JOBS) CC=$(NONDIST_CC)
 ICECC_CONFIGURE_CMD := $(CONFIGURE_CMD)
-ICECC_BUILD_CMD = make -j $(JOBS) CC=$(ICECC_CC)
+ICECC_BUILD_CMD = env $(ICECC_ENV) make -j $(JOBS) CC=$(ICECC_CC)
 CHECK_CMD = make -j $(JOBS) CC=$(CONCC_CC) check
 SRC_CLEAN_CMD := make -C workspace/src clean
 
 workspace:
 	git clone --depth=1 $(REPO) workspace/src
+
+workspace/workspacefs.override.yaml:
 
 STRACE_TARGET ?=
 STRACE_DIR := strace

@@ -2,6 +2,9 @@ import json
 import os
 import sys
 
+def eprint(*args, **kwargs):
+  print(*args, file=sys.stderr, **kwargs)
+
 jobs = {}
 names = []
 
@@ -19,7 +22,10 @@ data = []
 for job_name in sorted(jobs.keys()):
   job = jobs[job_name]
   job_data = [job_name] + [job.get(name) for name in names]
-  job_data.append(round(job['client'] / job['nondist'], 3))
+  if 'client' in job and 'nondist' in job:
+    job_data.append(round(job['client'] / job['nondist'], 3))
+  else:
+    eprint('WARN: {}'.format(job_name))
   data.append(job_data)
 
 print('''

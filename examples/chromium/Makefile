@@ -13,9 +13,8 @@ ICECC_GN_ARGS := "$(COMMON_GN_ARGS) cc_wrapper=\"icecc\" use_debug_fission=false
 ICECC_VERSION := /opt/clang.chromium.$(CHROMIUM).tar.gz
 ICECC_ENV := ICECC_REMOTE_CPP=1 ICECC_VERSION=$(ICECC_VERSION)
 
-BUILDENV := chromium-buildenv
+BUILDENV := concc-poc/chromium-buildenv
 BUILDENV_BUILD_OPTIONS := --build-arg CHROMIUM=$(CHROMIUM)
-REMOTE_CONTAINER := chromium-worker
 REPO := https://chromium.googlesource.com/chromium/src.git
 CONFIGURE_CMD := gn gen out/Default --args=$(GN_ARGS)
 BUILD_CMD = autoninja -C out/Default -j $(JOBS) $(TARGETS)
@@ -26,8 +25,10 @@ ICECC_BUILD_CMD = env $(ICECC_ENV) $(BUILD_CMD)
 CHECK_CMD = autoninja -C out/Default -j $(JOBS) blink_unittests && out/Default/blink_unittests
 SRC_CLEAN_CMD := rm -rf workspace/src/out
 
-workspace: | buildenv secrets
+workspace: | buildenv
 	git clone --depth=1 --branch=$(CHROMIUM) $(REPO) workspace/src
-	cp -f workspacefs.override.yaml workspace/
-	docker compose run --rm client concc -l gclient config --unmanaged $(REPO)
-	docker compose run --rm client concc -l gclient sync --force
+	concc-boot -C workspace -i $(BUILDENV) -s scripts -l concc gclient config --unmanaged $(REPO)
+	concc-boot -C workspace -i $(BUILDENV) -s scripts -l concc gclient sync --force
+
+workspace/workspacefs.override.yaml: workspacefs.override.yaml workspace
+	-@cp -f $< $@

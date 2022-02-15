@@ -1,0 +1,29 @@
+FROM debian:stable-slim
+
+RUN set -eux \
+ && export DEBIAN_FRONTEND=noninteractive \
+ && apt-get update -qq \
+ && apt-get install -y -qq --no-install-recommends icecc \
+ # for simulating a high rtt
+ && apt-get install -y --no-install-recommends iproute2 \
+ # cache dir
+ && mkdir -p /var/cache/icecc \
+ && chown icecc:icecc /var/cache/icecc \
+ # cleanup
+ && apt-get clean \
+ && rm -rf /var/lib/apt/lists/* \
+ && rm -rf /var/tmp/* \
+ && rm -rf /tmp/*
+
+# In normal use cases, we expose the following port here.  However, we disable
+# it in order to avoid a port conflict.  We define a port mapping explicitly and
+# use the -p option for iceccd.
+#EXPOSE 10245/tcp
+
+# In normal use cases, we assign a volume for the cache.  However, we disable it
+# in order to avoid wasting the disk space for ephemeral volumes that are
+# created every `docker run`.
+#VOLUME /var/cache/icecc
+
+ENTRYPOINT ["/usr/sbin/iceccd"]
+CMD []
