@@ -26,21 +26,21 @@ all: build
 .PHONY: build
 build: JOBS ?= $$(concc-worker-pool limit)
 build: buildenv workspace workspace/workspacefs.override.yaml
-	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
+	@#sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts -l concc -C src '$(CONFIGURE_CMD)'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts -w '$(REMOTES)' $(TEST_OPTIONS) concc -C src '$(TIME_TOTAL) $(BUILD_CMD)'
 
 .PHONY: nondist-build
 nondist-build: JOBS ?= $(NPROC)
 nondist-build: buildenv workspace
-	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
+	@#sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts -l concc -C src '$(NONDIST_CONFIGURE_CMD)'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts -l $(TEST_OPTIONS) concc -C src '$(TIME_TOTAL) $(NONDIST_BUILD_CMD)'
 
 .PHONY: icecc-build
 icecc-build: JOBS ?= 32
 icecc-build: buildenv workspace
-	sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
+	@#sudo sh -c 'echo 3 >/proc/sys/vm/drop_caches'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts -l concc -C src '$(ICECC_CONFIGURE_CMD)'
 	concc-boot -C workspace -i $(BUILDENV) -s scripts --icecc -w '$(REMOTES)' $(TEST_OPTIONS) concc -C src -l '$(TIME_TOTAL) $(ICECC_BUILD_CMD)'
 
